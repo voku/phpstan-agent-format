@@ -15,6 +15,9 @@ use Voku\PhpstanAgentFormat\Support\PhpstanTipHints;
 
 final readonly class IssueNormalizer
 {
+    /**
+     * @var array<string, 1|2>
+     */
     private const INFERRED_TYPE_PATTERNS = [
         '/expects parameter .*?(?:to be\s+)?(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
         '/expects\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
