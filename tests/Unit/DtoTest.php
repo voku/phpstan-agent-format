@@ -30,6 +30,7 @@ final class DtoTest
         );
 
         $array = $issue->toArray();
+        /** @var array<string, mixed> $array */
         TestCase::assertSame('i1', $array['id'], 'Issue id should be stable.');
         TestCase::assertHasKey('contextTrace', $array, 'Issue must include context trace.');
         TestCase::assertSame('root', $array['rootCauseSummary'], 'Issue root cause should be preserved.');

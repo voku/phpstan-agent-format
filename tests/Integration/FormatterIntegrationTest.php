@@ -53,6 +53,7 @@ final class FormatterIntegrationTest
         $exitCode = $formatter->formatErrors($analysis, $output);
         TestCase::assertSame(1, $exitCode, 'Formatter should return non-zero when issues exist.');
 
+        /** @var array{tool: string, summary: array{totalIssues: int}} $decoded */
         $decoded = json_decode($output->buffer, true, 512, JSON_THROW_ON_ERROR);
         TestCase::assertSame('phpstan-agent-format', $decoded['tool'], 'Tool name should be stable.');
         TestCase::assertSame(1, $decoded['summary']['totalIssues'], 'Expected one issue in summary.');

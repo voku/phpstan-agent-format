@@ -7,7 +7,6 @@ namespace Voku\PhpstanAgentFormat\Formatter;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
-use RuntimeException;
 use Voku\PhpstanAgentFormat\Budget\TokenBudgetReducer;
 use Voku\PhpstanAgentFormat\Cluster\IssueClusterer;
 use Voku\PhpstanAgentFormat\Config\AgentFormatConfig;
@@ -68,15 +67,7 @@ final class AgentErrorFormatter implements ErrorFormatter
         $reduced = $this->tokenBudgetReducer->reduce($presentation);
         $serialized = $this->serializerForMode($this->config->outputMode)->serialize($reduced);
 
-        if (method_exists($output, 'writeRaw')) {
-            $output->writeRaw($serialized);
-        } elseif (method_exists($output, 'writeLineFormatted')) {
-            $output->writeLineFormatted(rtrim($serialized, "\n"));
-        } elseif (method_exists($output, 'writeLine')) {
-            $output->writeLine(rtrim($serialized, "\n"));
-        } else {
-            throw new RuntimeException('Unknown PHPStan output API, cannot write formatted output.');
-        }
+        $output->writeRaw($serialized);
 
         return $analysisResult->hasErrors() ? 1 : 0;
     }

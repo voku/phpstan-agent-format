@@ -6,3 +6,11 @@ parameters:
     paths:
         - src
         - tests
+    excludePaths:
+        analyse:
+            - tests/Fixture/*
+            - tests/Stubs/*
+    ignoreErrors:
+        - identifier: phpstanApi.interface
+        - identifier: phpstanApi.method
+        - identifier: phpstanApi.constructor

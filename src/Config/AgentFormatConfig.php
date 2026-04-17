@@ -40,23 +40,29 @@ final readonly class AgentFormatConfig
             $raw = [];
         }
 
+        /** @var array<string, mixed> $raw */
         /** @var list<string> $patterns */
         $patterns = [];
-        foreach (($raw['redactPatterns'] ?? []) as $pattern) {
+        $redactPatterns = $raw['redactPatterns'] ?? [];
+        if (!\is_array($redactPatterns)) {
+            $redactPatterns = [];
+        }
+
+        foreach ($redactPatterns as $pattern) {
             if (\is_string($pattern) && $pattern !== '') {
                 $patterns[] = $pattern;
             }
         }
 
         return new self(
-            outputMode: self::normalizeMode((string) ($raw['outputMode'] ?? 'agentJson')),
-            maxClusters: max(1, (int) ($raw['maxClusters'] ?? 30)),
-            maxIssuesPerCluster: max(1, (int) ($raw['maxIssuesPerCluster'] ?? 3)),
-            snippetLinesBefore: max(0, (int) ($raw['snippetLinesBefore'] ?? 2)),
-            snippetLinesAfter: max(0, (int) ($raw['snippetLinesAfter'] ?? 3)),
-            includeDocblock: (bool) ($raw['includeDocblock'] ?? false),
-            includeRelatedDefinition: (bool) ($raw['includeRelatedDefinition'] ?? true),
-            tokenBudget: max(1, (int) ($raw['tokenBudget'] ?? 12000)),
+            outputMode: self::normalizeMode(self::stringValue($raw, 'outputMode', 'agentJson')),
+            maxClusters: max(1, self::intValue($raw, 'maxClusters', 30)),
+            maxIssuesPerCluster: max(1, self::intValue($raw, 'maxIssuesPerCluster', 3)),
+            snippetLinesBefore: max(0, self::intValue($raw, 'snippetLinesBefore', 2)),
+            snippetLinesAfter: max(0, self::intValue($raw, 'snippetLinesAfter', 3)),
+            includeDocblock: self::boolValue($raw, 'includeDocblock', false),
+            includeRelatedDefinition: self::boolValue($raw, 'includeRelatedDefinition', true),
+            tokenBudget: max(1, self::intValue($raw, 'tokenBudget', 12000)),
             redactPatterns: $patterns,
         );
     }
@@ -72,5 +78,58 @@ final readonly class AgentFormatConfig
             'compact', 'agentcompact', 'text' => 'agentCompact',
             default => 'agentJson',
         };
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     */
+    private static function stringValue(array $values, string $key, string $default): string
+    {
+        $value = $values[$key] ?? null;
+
+        return \is_string($value) && $value !== '' ? $value : $default;
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     */
+    private static function intValue(array $values, string $key, int $default): int
+    {
+        $value = $values[$key] ?? null;
+
+        if (\is_int($value)) {
+            return $value;
+        }
+
+        if (\is_string($value) && is_numeric($value)) {
+            return (int) $value;
+        }
+
+        return $default;
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     */
+    private static function boolValue(array $values, string $key, bool $default): bool
+    {
+        $value = $values[$key] ?? null;
+
+        if (\is_bool($value)) {
+            return $value;
+        }
+
+        if (\is_int($value)) {
+            return $value !== 0;
+        }
+
+        if (\is_string($value)) {
+            $normalized = filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        return $default;
     }
 }

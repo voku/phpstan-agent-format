@@ -21,10 +21,47 @@ final readonly class PresentationResult
     }
 
     /**
-     * @return array{tool:string,version:string,phpstanVersion:string,summary:array{totalIssues:int,clusters:int,suppressedDuplicates:int,tokenStats:array{estimatedTokens:int,tokenBudget:int,wasReduced:bool}},clusters:list<array<string,mixed>>}
+     * @return array{
+     *     tool: string,
+     *     version: string,
+     *     phpstanVersion: string,
+     *     summary: array{
+     *         totalIssues: int,
+     *         clusters: int,
+     *         suppressedDuplicates: int,
+     *         tokenStats: array{estimatedTokens: int, tokenBudget: int, wasReduced: bool}
+     *     },
+     *     clusters: list<array{
+     *         clusterId: string,
+     *         kind: string,
+     *         ruleIdentifier: ?string,
+     *         rootCauseSummary: string,
+     *         repairStrategySummary: string,
+     *         confidence: float,
+     *         affectedFiles: list<string>,
+     *         representativeIssues: list<array{
+     *             id: string,
+     *             message: string,
+     *             ruleIdentifier: ?string,
+     *             location: array{file: string, line: int},
+     *             symbolContext: array{className: ?string, methodName: ?string, propertyName: ?string, functionName: ?string, inferredType: ?string, typeOrigin: ?string},
+     *             snippet: array{startLine: int, highlightLine: int, lines: list<string>},
+     *             contextTrace: array{hops: list<array{location: array{file: string, line: int}, summary: string, symbol: ?string, ruleIdentifier: ?string}>},
+     *             rootCauseSummary: string,
+     *             repairStrategySummary: string,
+     *             secondaryLocations: list<array{file: string, line: int}>
+     *         }>,
+     *         suppressedDuplicateCount: int
+     *     }>
+     * }
      */
     public function toArray(): array
     {
+        $clusters = [];
+        foreach ($this->clusters as $cluster) {
+            $clusters[] = $cluster->toArray();
+        }
+
         return [
             'tool' => $this->tool,
             'version' => $this->version,
@@ -35,7 +72,7 @@ final readonly class PresentationResult
                 'suppressedDuplicates' => $this->suppressedDuplicates,
                 'tokenStats' => $this->tokenStats->toArray(),
             ],
-            'clusters' => array_map(static fn (IssueCluster $cluster): array => $cluster->toArray(), $this->clusters),
+            'clusters' => $clusters,
         ];
     }
 
