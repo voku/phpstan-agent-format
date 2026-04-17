@@ -16,6 +16,8 @@ final class IssueNormalizerTest
     public static function run(): void
     {
         $fixtureFile = dirname(__DIR__) . '/Fixture/Sample.php';
+        TestCase::assertTrue(is_file($fixtureFile), 'Fixture file should exist.');
+
         $error = new class ($fixtureFile) {
             public function __construct(private readonly string $file)
             {
@@ -23,7 +25,7 @@ final class IssueNormalizerTest
 
             public function getFile(): string
             {
-                return 'SampleService.php';
+                return 'Sample.php';
             }
 
             public function getFilePath(): string

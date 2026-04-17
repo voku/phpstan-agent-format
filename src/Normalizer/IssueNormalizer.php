@@ -11,6 +11,7 @@ use Voku\PhpstanAgentFormat\Dto\AgentIssue;
 use Voku\PhpstanAgentFormat\Dto\FileLocation;
 use Voku\PhpstanAgentFormat\Dto\FixHint;
 use Voku\PhpstanAgentFormat\Dto\SymbolContext;
+use Voku\PhpstanAgentFormat\Support\PhpstanTipHints;
 
 final readonly class IssueNormalizer
 {
@@ -46,8 +47,8 @@ final readonly class IssueNormalizer
             $tip = $this->getNullableString($error, 'getTip');
 
             $location = new FileLocation($filePath, $line);
-            $nodeLocation = $nodeLine !== null && $nodeLine !== $line ? new FileLocation($filePath, max(1, $nodeLine)) : null;
-            $traitLocation = $traitFilePath !== null && $nodeLine !== null ? new FileLocation($traitFilePath, max(1, $nodeLine)) : null;
+            $nodeLocation = $nodeLine !== null && $nodeLine !== $line ? new FileLocation($filePath, $this->ensurePositiveLine($nodeLine)) : null;
+            $traitLocation = $traitFilePath !== null && $nodeLine !== null ? new FileLocation($traitFilePath, $this->ensurePositiveLine($nodeLine)) : null;
             $symbolContext = $this->extractSymbolContext($message, $ruleIdentifier, $tip);
             $snippet = $this->contextExtractor->extractSnippet($filePath, $line);
             $fixHint = $this->createFixHint($message, $ruleIdentifier);
@@ -145,7 +146,7 @@ final readonly class IssueNormalizer
         }
 
         $normalizedTip = strtolower($this->stripFormatting($tip));
-        if (str_contains($normalizedTip, 'because the type is coming from a phpdoc')) {
+        if (str_contains($normalizedTip, PhpstanTipHints::PHPDOC_TYPE_ORIGIN_FRAGMENT)) {
             return 'phpdoc';
         }
 
@@ -190,6 +191,11 @@ final readonly class IssueNormalizer
     private function issueId(string $file, int $line, string $message, int $index): string
     {
         return sha1($file . '|' . $line . '|' . $message . '|' . $index);
+    }
+
+    private function ensurePositiveLine(int $line): int
+    {
+        return max(1, $line);
     }
 
     /**

@@ -8,6 +8,7 @@ use Voku\PhpstanAgentFormat\Dto\ContextTrace;
 use Voku\PhpstanAgentFormat\Dto\FileLocation;
 use Voku\PhpstanAgentFormat\Dto\SymbolContext;
 use Voku\PhpstanAgentFormat\Dto\TraceHop;
+use Voku\PhpstanAgentFormat\Support\PhpstanTipHints;
 
 final class ContextTraceBuilder
 {
@@ -95,6 +96,11 @@ final class ContextTraceBuilder
             return 'unknown';
         }
 
+        $nodeType = trim($nodeType);
+        if ($nodeType === '') {
+            return 'unknown';
+        }
+
         $nodeType = rtrim($nodeType, '\\');
         if ($nodeType === '') {
             return 'unknown';
@@ -127,7 +133,7 @@ final class ContextTraceBuilder
                 continue;
             }
 
-            if ($typeOrigin === 'phpdoc' && str_contains(strtolower($normalized), 'because the type is coming from a phpdoc')) {
+            if ($typeOrigin === 'phpdoc' && str_contains(strtolower($normalized), PhpstanTipHints::PHPDOC_TYPE_ORIGIN_FRAGMENT)) {
                 return 'PHPStan reports that the current type certainty comes from PHPDoc.';
             }
 
