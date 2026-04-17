@@ -11,6 +11,8 @@ use Voku\PhpstanAgentFormat\Dto\TraceHop;
 
 final class ContextTraceBuilder
 {
+    private const TIP_BULLET_TRIM_CHARS = "• \t-";
+
     public function build(
         FileLocation $location,
         SymbolContext $symbolContext,
@@ -115,7 +117,7 @@ final class ContextTraceBuilder
         }
 
         foreach ($lines as $line) {
-            $normalized = trim(ltrim($line, "• \t-"));
+            $normalized = trim(ltrim($line, self::TIP_BULLET_TRIM_CHARS));
             if ($normalized === '' || str_starts_with($normalized, 'Learn more at ')) {
                 continue;
             }

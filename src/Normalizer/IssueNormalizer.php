@@ -14,6 +14,12 @@ use Voku\PhpstanAgentFormat\Dto\SymbolContext;
 
 final readonly class IssueNormalizer
 {
+    private const INFERRED_TYPE_PATTERNS = [
+        '/expects(?: parameter .*?)?\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
+        '/does not accept(?: default value of type| value of type)?\s+(.+?)(?:\.|$)/i' => 1,
+        '/with type\s+(.+?)\s+is not subtype of(?: native)? type\s+.+?(?:\.|$)/i' => 1,
+    ];
+
     public function __construct(
         private ContextExtractor $contextExtractor,
         private ContextTraceBuilder $traceBuilder,
@@ -113,13 +119,7 @@ final readonly class IssueNormalizer
 
     private function extractInferredType(string $message): ?string
     {
-        $patterns = [
-            '/expects(?: parameter .*?)?\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
-            '/does not accept(?: default value of type| value of type)?\s+(.+?)(?:\.|$)/i' => 1,
-            '/with type\s+(.+?)\s+is not subtype of(?: native)? type\s+.+?(?:\.|$)/i' => 1,
-        ];
-
-        foreach ($patterns as $pattern => $index) {
+        foreach (self::INFERRED_TYPE_PATTERNS as $pattern => $index) {
             if (preg_match($pattern, $message, $match) !== 1) {
                 continue;
             }
