@@ -47,14 +47,13 @@ $failures = [];
 
 foreach ($tests as [$className, $method]) {
     $testLabel = $className . '::' . $method;
-    $testCallable = $className . '::' . $method;
 
     try {
-        if (!class_exists($className)) {
+        if (!class_exists($className) || !method_exists($className, $method)) {
             throw new RuntimeException(sprintf('Invalid test callable: %s', $testLabel));
         }
 
-        call_user_func($testCallable);
+        call_user_func([$className, $method]);
         echo "[PASS] {$testLabel}\n";
     } catch (Throwable $throwable) {
         $failures[] = "[FAIL] {$testLabel}: " . $throwable->getMessage();
