@@ -145,7 +145,7 @@ final readonly class IssueNormalizer
             return $ruleIdentifier;
         }
 
-        $normalizedTip = strtolower($this->stripFormatting($tip));
+        $normalizedTip = strtolower(PhpstanTipHints::stripFormatting($tip));
         if (str_contains($normalizedTip, PhpstanTipHints::PHPDOC_TYPE_ORIGIN_FRAGMENT)) {
             return 'phpdoc';
         }
@@ -261,13 +261,4 @@ final readonly class IssueNormalizer
         return is_int($value) ? $value : null;
     }
 
-    private function stripFormatting(string $value): string
-    {
-        $plain = preg_replace('/<[^>]+>/', '', $value);
-        if (!is_string($plain)) {
-            return $value;
-        }
-
-        return trim($plain);
-    }
 }

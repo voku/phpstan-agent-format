@@ -117,10 +117,7 @@ final class ContextTraceBuilder
             return null;
         }
 
-        $plain = preg_replace('/<[^>]+>/', '', $tip);
-        if (!is_string($plain)) {
-            return null;
-        }
+        $plain = PhpstanTipHints::stripFormatting($tip);
 
         $lines = preg_split('/\R+/', trim($plain));
         if (!is_array($lines)) {

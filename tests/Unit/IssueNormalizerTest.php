@@ -63,7 +63,7 @@ final class IssueNormalizerTest
                 return 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.';
             }
         };
-        $parameterError = new class ($fixtureFile) {
+        $methodParameterTypeError = new class ($fixtureFile) {
             public function __construct(private readonly string $file)
             {
             }
@@ -115,7 +115,7 @@ final class IssueNormalizerTest
         TestCase::assertTrue($hasNodeContext, 'Context trace should include the PHPStan node context.');
         TestCase::assertTrue($hasPhpDocHint, 'Context trace should include the PHPStan type-origin hint.');
 
-        $parameterIssues = $normalizer->normalize(new AnalysisResult([$parameterError], []));
+        $parameterIssues = $normalizer->normalize(new AnalysisResult([$methodParameterTypeError], []));
         TestCase::assertSame('int', $parameterIssues[0]->symbolContext->inferredType, 'Parameter-focused PHPStan messages should also expose the given type.');
     }
 }
