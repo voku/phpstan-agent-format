@@ -61,6 +61,31 @@ final class IssueNormalizerTest
                 return 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.';
             }
         };
+        $parameterError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 9;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Method Demo::run() expects parameter #1 $value to be string, int given.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'argument.type';
+            }
+        };
 
         $normalizer = new IssueNormalizer(
             new ContextExtractor(new AgentFormatConfig('agentJson', 30, 3, 1, 1, false, true, 12000, [])),
@@ -87,5 +112,8 @@ final class IssueNormalizerTest
 
         TestCase::assertTrue($hasNodeContext, 'Context trace should include the PHPStan node context.');
         TestCase::assertTrue($hasPhpDocHint, 'Context trace should include the PHPStan type-origin hint.');
+
+        $parameterIssues = $normalizer->normalize(new AnalysisResult([$parameterError], []));
+        TestCase::assertSame('int', $parameterIssues[0]->symbolContext->inferredType, 'Parameter-focused PHPStan messages should also expose the given type.');
     }
 }

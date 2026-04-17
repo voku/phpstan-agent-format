@@ -15,7 +15,8 @@ use Voku\PhpstanAgentFormat\Dto\SymbolContext;
 final readonly class IssueNormalizer
 {
     private const INFERRED_TYPE_PATTERNS = [
-        '/expects(?: parameter .*?)?\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
+        '/expects parameter .*?(?:to be\s+)?(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
+        '/expects\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
         '/does not accept(?: default value of type| value of type)?\s+(.+?)(?:\.|$)/i' => 1,
         '/with type\s+(.+?)\s+is not subtype of(?: native)? type\s+.+?(?:\.|$)/i' => 1,
     ];

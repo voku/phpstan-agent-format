@@ -95,7 +95,7 @@ final class ContextTraceBuilder
             return 'unknown';
         }
 
-        $shortName = str_contains($nodeType, '\\') ? (string) substr($nodeType, strrpos($nodeType, '\\') + 1) : $nodeType;
+        $shortName = str_contains($nodeType, '\\') ? substr($nodeType, strrpos($nodeType, '\\') + 1) : $nodeType;
 
         return $shortName !== '' ? $shortName : 'unknown';
     }
