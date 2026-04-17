@@ -82,7 +82,7 @@ final readonly class TokenBudgetReducer
             $payload[] = $cluster->toArray();
         }
 
-        return (int) max(1, (int) ceil(strlen((string) json_encode($payload, JSON_THROW_ON_ERROR)) / 4));
+        return (int) max(1, ceil(strlen((string) json_encode($payload, JSON_THROW_ON_ERROR)) / 4));
     }
 
     /**

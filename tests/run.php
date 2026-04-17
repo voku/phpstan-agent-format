@@ -36,21 +36,27 @@ spl_autoload_register(static function (string $class) use ($root): void {
 });
 
 $tests = [
-    'Voku\\PhpstanAgentFormat\\Tests\\Unit\\DtoTest::run',
-    'Voku\\PhpstanAgentFormat\\Tests\\Unit\\ClustererTest::run',
-    'Voku\\PhpstanAgentFormat\\Tests\\Unit\\TokenBudgetReducerTest::run',
-    'Voku\\PhpstanAgentFormat\\Tests\\Unit\\SerializerTest::run',
-    'Voku\\PhpstanAgentFormat\\Tests\\Integration\\FormatterIntegrationTest::run',
+    ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\DtoTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\ClustererTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\TokenBudgetReducerTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\SerializerTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\FormatterIntegrationTest', 'run'],
 ];
 
 $failures = [];
 
-foreach ($tests as $test) {
+foreach ($tests as [$className, $method]) {
+    $testLabel = $className . '::' . $method;
+
     try {
-        $test();
-        echo "[PASS] {$test}\n";
+        if (!class_exists($className) || !is_callable([$className, $method])) {
+            throw new RuntimeException(sprintf('Invalid test callable: %s', $testLabel));
+        }
+
+        call_user_func([$className, $method]);
+        echo "[PASS] {$testLabel}\n";
     } catch (Throwable $throwable) {
-        $failures[] = "[FAIL] {$test}: " . $throwable->getMessage();
+        $failures[] = "[FAIL] {$testLabel}: " . $throwable->getMessage();
     }
 }
 

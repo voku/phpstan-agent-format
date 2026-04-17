@@ -78,7 +78,7 @@ final readonly class IssueClusterer
             str_contains($haystack, 'null') => 'nullable-propagation',
             str_contains($haystack, 'missing') && str_contains($haystack, 'type') => 'missing-type-declaration',
             str_contains($haystack, 'array{') || str_contains($haystack, 'array shape') => 'array-shape-drift',
-            str_contains($haystack, 'undefined property'), str_contains($haystack, 'undefined method') => 'undefined-member-from-inferred-type',
+            str_contains($haystack, 'undefined property') || str_contains($haystack, 'undefined method') => 'undefined-member-from-inferred-type',
             str_contains($haystack, 'ignore') || str_contains($haystack, 'baseline') => 'stale-ignore-noise',
             default => 'same-rule-same-symbol',
         };
