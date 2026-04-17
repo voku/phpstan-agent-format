@@ -1,0 +1,20 @@
+includes:
+    - ../extension.neon
+
+parameters:
+    level: max
+    paths:
+        - ../src
+    agentFormat:
+        outputMode: json
+        maxClusters: 30
+        maxIssuesPerCluster: 3
+        snippetLinesBefore: 2
+        snippetLinesAfter: 3
+        includeDocblock: false
+        includeRelatedDefinition: true
+        tokenBudget: 12000
+        redactPatterns:
+            - '(?i)password\s*=\s*.+'
+            - '(?i)api[_-]?key\s*=\s*.+'
+            - '(?i)secret\s*=\s*.+'
