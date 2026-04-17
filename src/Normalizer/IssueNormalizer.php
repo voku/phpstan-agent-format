@@ -47,7 +47,7 @@ final readonly class IssueNormalizer
 
             $location = new FileLocation($filePath, $line);
             $nodeLocation = $nodeLine !== null && $nodeLine !== $line ? new FileLocation($filePath, max(1, $nodeLine)) : null;
-            $traitLocation = $traitFilePath !== null ? new FileLocation($traitFilePath, $nodeLine ?? $line) : null;
+            $traitLocation = $traitFilePath !== null && $nodeLine !== null ? new FileLocation($traitFilePath, max(1, $nodeLine)) : null;
             $symbolContext = $this->extractSymbolContext($message, $ruleIdentifier, $tip);
             $snippet = $this->contextExtractor->extractSnippet($filePath, $line);
             $fixHint = $this->createFixHint($message, $ruleIdentifier);
