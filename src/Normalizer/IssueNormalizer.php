@@ -47,8 +47,8 @@ final readonly class IssueNormalizer
             $tip = $this->getNullableString($error, 'getTip');
 
             $location = new FileLocation($filePath, $line);
-            $nodeLocation = $nodeLine !== null && $nodeLine !== $line ? new FileLocation($filePath, $this->ensurePositiveLine($nodeLine)) : null;
-            $traitLocation = $traitFilePath !== null && $nodeLine !== null ? new FileLocation($traitFilePath, $this->ensurePositiveLine($nodeLine)) : null;
+            $nodeLocation = $nodeLine !== null && $nodeLine !== $line ? new FileLocation($filePath, $this->normalizeLineNumber($nodeLine)) : null;
+            $traitLocation = $traitFilePath !== null && $nodeLine !== null ? new FileLocation($traitFilePath, $this->normalizeLineNumber($nodeLine)) : null;
             $symbolContext = $this->extractSymbolContext($message, $ruleIdentifier, $tip);
             $snippet = $this->contextExtractor->extractSnippet($filePath, $line);
             $fixHint = $this->createFixHint($message, $ruleIdentifier);
@@ -193,7 +193,7 @@ final readonly class IssueNormalizer
         return sha1($file . '|' . $line . '|' . $message . '|' . $index);
     }
 
-    private function ensurePositiveLine(int $line): int
+    private function normalizeLineNumber(int $line): int
     {
         return max(1, $line);
     }

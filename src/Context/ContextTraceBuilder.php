@@ -12,7 +12,7 @@ use Voku\PhpstanAgentFormat\Support\PhpstanTipHints;
 
 final class ContextTraceBuilder
 {
-    private const TIP_BULLET_TRIM_CHARS = "• \t-";
+    private const TIP_LINE_PREFIX_CHARS = "• \t-";
 
     public function build(
         FileLocation $location,
@@ -128,7 +128,7 @@ final class ContextTraceBuilder
         }
 
         foreach ($lines as $line) {
-            $normalized = trim(ltrim($line, self::TIP_BULLET_TRIM_CHARS));
+            $normalized = trim(ltrim($line, self::TIP_LINE_PREFIX_CHARS));
             if ($normalized === '' || str_starts_with($normalized, 'Learn more at ')) {
                 continue;
             }
