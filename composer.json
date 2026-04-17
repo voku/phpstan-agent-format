@@ -1,0 +1,34 @@
+{
+  "name": "voku/phpstan-agent-format",
+  "description": "PHPStan custom error formatter optimized for coding-agent repair loops.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": "^8.2",
+    "phpstan/phpstan": "^2.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "Voku\\PhpstanAgentFormat\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Voku\\PhpstanAgentFormat\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "php tests/run.php",
+    "lint": "php tests/lint.php",
+    "phpstan": "phpstan analyse --configuration phpstan.neon.dist"
+  },
+  "extra": {
+    "phpstan": {
+      "includes": [
+        "extension.neon"
+      ]
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}

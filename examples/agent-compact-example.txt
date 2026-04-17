@@ -1,0 +1,2 @@
+phpstan-agent-format totalIssues=2 clusters=1 suppressed=1
+[abc123def456] rule=argument.type cause="Nullable value reaches a non-null expectation." fix="Constrain nullability earlier or widen the target type to accept null." dup=1

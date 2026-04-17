@@ -1,0 +1,7 @@
+services:
+    errorFormatter.agent:
+        class: Voku\PhpstanAgentFormat\Formatter\AgentErrorFormatter
+        arguments:
+            parameters: %parameters%
+        tags:
+            - phpstan.errorFormatter
