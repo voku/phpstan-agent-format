@@ -1,0 +1,1 @@
+# phpstan-agent-format
