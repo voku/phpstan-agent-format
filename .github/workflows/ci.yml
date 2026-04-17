@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.composer/cache/files
+            ~/.cache/composer/files
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Lint
+        run: composer lint
+
+      - name: Test
+        run: composer test
+
+      - name: PHPStan (default formatter)
+        run: vendor/bin/phpstan analyse --configuration phpstan.neon.dist --no-progress
+
+      - name: PHPStan (agent formatter dogfood)
+        run: vendor/bin/phpstan analyse --configuration phpstan.neon.dist --error-format=agent --no-progress

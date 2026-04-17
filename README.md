@@ -45,6 +45,8 @@ Run:
 vendor/bin/phpstan analyse --error-format=agent
 ```
 
+The repository CI dogfoods both modes by running PHPStan once with the default formatter and once with `--error-format=agent`.
+
 ## Output modes
 
 - `agentJson` (default)

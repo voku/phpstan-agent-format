@@ -22,8 +22,27 @@ final readonly class AgentIssue
     ) {
     }
 
+    /**
+     * @return array{
+     *     id: string,
+     *     message: string,
+     *     ruleIdentifier: ?string,
+     *     location: array{file: string, line: int},
+     *     symbolContext: array{className: ?string, methodName: ?string, propertyName: ?string, functionName: ?string, inferredType: ?string, typeOrigin: ?string},
+     *     snippet: array{startLine: int, highlightLine: int, lines: list<string>},
+     *     contextTrace: array{hops: list<array{location: array{file: string, line: int}, summary: string, symbol: ?string, ruleIdentifier: ?string}>},
+     *     rootCauseSummary: string,
+     *     repairStrategySummary: string,
+     *     secondaryLocations: list<array{file: string, line: int}>
+     * }
+     */
     public function toArray(): array
     {
+        $secondaryLocations = [];
+        foreach ($this->secondaryLocations as $location) {
+            $secondaryLocations[] = $location->toArray();
+        }
+
         return [
             'id' => $this->id,
             'message' => $this->message,
@@ -34,7 +53,7 @@ final readonly class AgentIssue
             'contextTrace' => $this->contextTrace->toArray(),
             'rootCauseSummary' => $this->fixHint->rootCauseSummary,
             'repairStrategySummary' => $this->fixHint->repairStrategySummary,
-            'secondaryLocations' => array_map(static fn (FileLocation $location): array => $location->toArray(), $this->secondaryLocations),
+            'secondaryLocations' => $secondaryLocations,
         ];
     }
 

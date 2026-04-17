@@ -7,7 +7,7 @@ $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root));
 $errors = [];
 
 foreach ($files as $file) {
-    if (!$file->isFile() || $file->getExtension() !== 'php') {
+    if (!$file instanceof SplFileInfo || !$file->isFile() || $file->getExtension() !== 'php') {
         continue;
     }
 

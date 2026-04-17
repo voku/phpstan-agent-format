@@ -23,8 +23,37 @@ final readonly class IssueCluster
     ) {
     }
 
+    /**
+     * @return array{
+     *     clusterId: string,
+     *     kind: string,
+     *     ruleIdentifier: ?string,
+     *     rootCauseSummary: string,
+     *     repairStrategySummary: string,
+     *     confidence: float,
+     *     affectedFiles: list<string>,
+     *     representativeIssues: list<array{
+     *         id: string,
+     *         message: string,
+     *         ruleIdentifier: ?string,
+     *         location: array{file: string, line: int},
+     *         symbolContext: array{className: ?string, methodName: ?string, propertyName: ?string, functionName: ?string, inferredType: ?string, typeOrigin: ?string},
+     *         snippet: array{startLine: int, highlightLine: int, lines: list<string>},
+     *         contextTrace: array{hops: list<array{location: array{file: string, line: int}, summary: string, symbol: ?string, ruleIdentifier: ?string}>},
+     *         rootCauseSummary: string,
+     *         repairStrategySummary: string,
+     *         secondaryLocations: list<array{file: string, line: int}>
+     *     }>,
+     *     suppressedDuplicateCount: int
+     * }
+     */
     public function toArray(): array
     {
+        $representativeIssues = [];
+        foreach ($this->representativeIssues as $issue) {
+            $representativeIssues[] = $issue->toArray();
+        }
+
         return [
             'clusterId' => $this->clusterId,
             'kind' => $this->kind,
@@ -33,7 +62,7 @@ final readonly class IssueCluster
             'repairStrategySummary' => $this->repairStrategySummary,
             'confidence' => $this->confidence,
             'affectedFiles' => $this->affectedFiles,
-            'representativeIssues' => array_map(static fn (AgentIssue $issue): array => $issue->toArray(), $this->representativeIssues),
+            'representativeIssues' => $representativeIssues,
             'suppressedDuplicateCount' => $this->suppressedDuplicateCount,
         ];
     }

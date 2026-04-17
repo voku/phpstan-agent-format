@@ -7,7 +7,7 @@ $root = dirname(__DIR__);
 $stubFiles = [];
 $stubIterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/tests/Stubs'));
 foreach ($stubIterator as $file) {
-    if ($file->isFile() && $file->getExtension() === 'php') {
+    if ($file instanceof SplFileInfo && $file->isFile() && $file->getExtension() === 'php') {
         $stubFiles[] = $file->getPathname();
     }
 }
@@ -47,13 +47,14 @@ $failures = [];
 
 foreach ($tests as [$className, $method]) {
     $testLabel = $className . '::' . $method;
+    $testCallable = $className . '::' . $method;
 
     try {
-        if (!class_exists($className) || !is_callable([$className, $method])) {
+        if (!class_exists($className)) {
             throw new RuntimeException(sprintf('Invalid test callable: %s', $testLabel));
         }
 
-        call_user_func([$className, $method]);
+        call_user_func($testCallable);
         echo "[PASS] {$testLabel}\n";
     } catch (Throwable $throwable) {
         $failures[] = "[FAIL] {$testLabel}: " . $throwable->getMessage();
