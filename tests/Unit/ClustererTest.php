@@ -35,6 +35,10 @@ final class ClustererTest
         $identifierClusters = $clusterer->cluster([$missingPropertyType, $missingMethodType]);
         TestCase::assertSame(1, count($identifierClusters), 'Issues in the same PHPStan identifier family should cluster together.');
         TestCase::assertSame('missing-type-declaration', $identifierClusters[0]->kind, 'Identifier families should drive stable cluster kinds.');
+
+        $nonObjectMethod = self::issue('e', 22, 'Cannot call method trim() on string.', 'method.nonObject', 'method.nonObject');
+        $nonObjectClusters = $clusterer->cluster([$nonObjectMethod]);
+        TestCase::assertSame('undefined-member-from-inferred-type', $nonObjectClusters[0]->kind, 'Non-object member access should reuse the inferred-member cluster kind.');
     }
 
     private static function issue(

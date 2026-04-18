@@ -21,6 +21,8 @@ final readonly class IssueNormalizer
     private const INFERRED_TYPE_PATTERNS = [
         '/expects parameter [^,]+?(?:\s+to be)?\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
         '/expects\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
+        '/should return\s+(.+?)\s+but returns\s+(.+?)(?:\.|$)/i' => 2,
+        '/cannot call method [A-Za-z_][A-Za-z0-9_]*\(\) on\s+(.+?)(?:\.|$)/i' => 1,
         '/does not accept(?: default value of type| value of type)?\s+(.+?)(?:\.|$)/i' => 1,
         '/with type\s+(.+?)\s+is not subtype of(?: native)? type\s+.+?(?:\.|$)/i' => 1,
     ];
@@ -31,6 +33,7 @@ final readonly class IssueNormalizer
     private const EXPECTED_TYPE_PATTERNS = [
         '/expects parameter [^,]+?(?:\s+to be)?\s+(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
         '/expects\s+(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
+        '/should return\s+(.+?)\s+but returns\s+.+?(?:\.|$)/i' => 1,
     ];
 
     public function __construct(
@@ -151,6 +154,10 @@ final readonly class IssueNormalizer
 
     private function extractMethodName(string $message): ?string
     {
+        if (preg_match('/cannot call method\s+([A-Za-z_][A-Za-z0-9_]*)\(\)/i', $message, $match) === 1) {
+            return $match[1];
+        }
+
         if (preg_match('/(?:static\s+)?method\s+([\\\\\w]+::[A-Za-z_][A-Za-z0-9_]*)\(\)/i', $message, $match) === 1) {
             return $match[1];
         }
@@ -264,7 +271,12 @@ final readonly class IssueNormalizer
             );
         }
 
-        if (str_contains($kind, 'undefined')) {
+        if (
+            str_contains($kind, 'undefined')
+            || str_contains($kind, 'cannot call method')
+            || str_contains($kind, 'cannot access property')
+            || str_contains($kind, 'nonobject')
+        ) {
             return new FixHint(
                 rootCauseSummary: 'The inferred type does not define the accessed member.',
                 repairStrategySummary: 'Correct the source type or guard before member access.',

@@ -88,6 +88,56 @@ final class IssueNormalizerTest
                 return 'argument.type';
             }
         };
+        $nonObjectMethodError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 8;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Cannot call method trim() on string.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'method.nonObject';
+            }
+        };
+        $arrayShapeReturnError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 8;
+            }
+
+            public function getMessage(): string
+            {
+                return "Function arrayShapeFixture() should return array{foo: int} but returns array{foo: 'x'}.";
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'return.type';
+            }
+        };
 
         $normalizer = new IssueNormalizer(
             new ContextExtractor(new AgentFormatConfig('agentJson', 30, 3, 1, 1, false, true, 12000, [])),
@@ -121,5 +171,14 @@ final class IssueNormalizerTest
         TestCase::assertSame('value', $parameterIssues[0]->symbolContext->parameterName, 'Method parameter names should be exposed for repair suggestions.');
         TestCase::assertSame('string', $parameterIssues[0]->symbolContext->expectedType, 'Method parameter messages should expose the expected type.');
         TestCase::assertSame('int', $parameterIssues[0]->symbolContext->inferredType, 'Parameter-focused PHPStan messages should also expose the given type.');
+
+        $nonObjectIssues = $normalizer->normalize(new AnalysisResult([$nonObjectMethodError], []));
+        TestCase::assertSame('trim', $nonObjectIssues[0]->symbolContext->methodName, 'Non-object method access should expose the accessed member name.');
+        TestCase::assertSame('string', $nonObjectIssues[0]->symbolContext->inferredType, 'Non-object method access should expose the receiver type.');
+
+        $arrayShapeIssues = $normalizer->normalize(new AnalysisResult([$arrayShapeReturnError], []));
+        TestCase::assertSame('arrayShapeFixture', $arrayShapeIssues[0]->symbolContext->functionName, 'Return-type messages should preserve function names.');
+        TestCase::assertSame('array{foo: int}', $arrayShapeIssues[0]->symbolContext->expectedType, 'Return-type messages should expose expected return types.');
+        TestCase::assertSame("array{foo: 'x'}", $arrayShapeIssues[0]->symbolContext->inferredType, 'Return-type messages should expose actual return types.');
     }
 }

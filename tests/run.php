@@ -43,6 +43,7 @@ $tests = [
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\SerializerTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\FormatterIntegrationTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliIntegrationTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliFixtureMatrixTest', 'run'],
 ];
 
 $failures = [];
