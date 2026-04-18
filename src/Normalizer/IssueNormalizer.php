@@ -19,10 +19,19 @@ final readonly class IssueNormalizer
      * @var array<string, 1|2>
      */
     private const INFERRED_TYPE_PATTERNS = [
-        '/expects parameter .*?(?:to be\s+)?(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
-        '/expects\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
+        '/should return\s+(.+?)\s+but returns\s+(.+?)(?:\.|$)/i' => 2,
+        '/cannot call method [A-Za-z_][A-Za-z0-9_]*\(\) on\s+(.+?)(?:\.|$)/i' => 1,
+        '/cannot access property \$[A-Za-z_][A-Za-z0-9_]* on\s+(.+?)(?:\.|$)/i' => 1,
+        '/offset\s+.+?\s+does not exist on\s+(.+?)(?:\.|$)/i' => 1,
         '/does not accept(?: default value of type| value of type)?\s+(.+?)(?:\.|$)/i' => 1,
         '/with type\s+(.+?)\s+is not subtype of(?: native)? type\s+.+?(?:\.|$)/i' => 1,
+    ];
+
+    /**
+     * @var array<string, 1>
+     */
+    private const EXPECTED_TYPE_PATTERNS = [
+        '/should return\s+(.+?)\s+but returns\s+.+?(?:\.|$)/i' => 1,
     ];
 
     public function __construct(
@@ -94,22 +103,14 @@ final readonly class IssueNormalizer
 
     private function extractSymbolContext(string $message, ?string $ruleIdentifier, ?string $tip = null): SymbolContext
     {
-        $class = null;
-        $method = null;
-        $property = null;
-        $function = null;
+        [$class, $property] = $this->extractPropertyContext($message);
+        $method = $this->extractMethodName($message);
+        $function = $this->extractFunctionName($message);
+        $parameter = $this->extractParameterName($message);
+        $expectedAndInferredTypes = $this->extractExpectedAndInferredTypes($message);
 
-        if (preg_match('/class\s+([\\\\\w]+)/i', $message, $match) === 1) {
-            $class = $match[1];
-        }
-        if (preg_match('/method\s+([\\\\\w:]+)/i', $message, $match) === 1) {
-            $method = $match[1];
-        }
-        if (preg_match('/property\s+\$?([\\\\\w]+)/i', $message, $match) === 1) {
-            $property = $match[1];
-        }
-        if (preg_match('/function\s+([\\\\\w]+)/i', $message, $match) === 1) {
-            $function = $match[1];
+        if ($class === null) {
+            $class = $this->extractClassName($message);
         }
 
         return new SymbolContext(
@@ -117,13 +118,121 @@ final readonly class IssueNormalizer
             methodName: $method,
             propertyName: $property,
             functionName: $function,
-            inferredType: $this->extractInferredType($message),
+            parameterName: $parameter,
+            expectedType: $this->extractExpectedType($message, $expectedAndInferredTypes),
+            inferredType: $this->extractInferredType($message, $expectedAndInferredTypes),
             typeOrigin: $this->extractTypeOrigin($ruleIdentifier, $tip),
         );
     }
 
-    private function extractInferredType(string $message): ?string
+    /**
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function extractPropertyContext(string $message): array
     {
+        if (preg_match('/property\s+([\\\\\w]+)::\$([A-Za-z_][A-Za-z0-9_]*)/i', $message, $match) === 1) {
+            return [$match[1], $match[2]];
+        }
+
+        if (preg_match('/cannot access property\s+\$([A-Za-z_][A-Za-z0-9_]*)\s+on\s+.+?(?:\.|$)/i', $message, $match) === 1) {
+            return [null, $match[1]];
+        }
+
+        return [null, null];
+    }
+
+    private function extractClassName(string $message): ?string
+    {
+        if (preg_match('/(?:class|trait)\s+([\\\\\w]+)/i', $message, $match) === 1) {
+            return $match[1];
+        }
+
+        if (preg_match('/(?:method|property)\s+([\\\\\w]+)::/i', $message, $match) === 1) {
+            return $match[1];
+        }
+
+        return null;
+    }
+
+    private function extractMethodName(string $message): ?string
+    {
+        if (preg_match('/cannot call method\s+([A-Za-z_][A-Za-z0-9_]*)\(\)/i', $message, $match) === 1) {
+            return $match[1];
+        }
+
+        if (preg_match('/(?:static\s+)?method\s+([\\\\\w]+::[A-Za-z_][A-Za-z0-9_]*)\(\)/i', $message, $match) === 1) {
+            return $match[1];
+        }
+
+        return null;
+    }
+
+    private function extractFunctionName(string $message): ?string
+    {
+        if (preg_match('/function\s+([\\\\\w]+)(?:\(\))?/i', $message, $match) === 1) {
+            return $match[1];
+        }
+
+        return null;
+    }
+
+    private function extractParameterName(string $message): ?string
+    {
+        foreach ([
+            '/parameter\s+#\d+\s+\$([A-Za-z_][A-Za-z0-9_]*)\b/i',
+            '/has parameter\s+\$([A-Za-z_][A-Za-z0-9_]*)\b/i',
+            '/parameter\s+\$([A-Za-z_][A-Za-z0-9_]*)\b/i',
+        ] as $pattern) {
+            if (preg_match($pattern, $message, $match) === 1) {
+                return $match[1];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array{0: string, 1: string}|null $expectedAndInferredTypes
+     */
+    private function extractExpectedType(string $message, ?array $expectedAndInferredTypes = null): ?string
+    {
+        if ($expectedAndInferredTypes !== null) {
+            return $expectedAndInferredTypes[0];
+        }
+
+        foreach (self::EXPECTED_TYPE_PATTERNS as $pattern => $index) {
+            if (preg_match($pattern, $message, $match) !== 1) {
+                continue;
+            }
+
+            $type = $this->normalizeExpectedTypeCandidate($match[$index]);
+            if ($type !== '') {
+                return $type;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeExpectedTypeCandidate(string $candidate): string
+    {
+        $candidate = trim($candidate);
+        if (preg_match('/\bto be\s+(.+)$/i', $candidate, $match) === 1) {
+            return trim($match[1]);
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * @param array{0: string, 1: string}|null $expectedAndInferredTypes
+     */
+    private function extractInferredType(string $message, ?array $expectedAndInferredTypes = null): ?string
+    {
+        if ($expectedAndInferredTypes !== null) {
+            return $expectedAndInferredTypes[1];
+        }
+
         foreach (self::INFERRED_TYPE_PATTERNS as $pattern => $index) {
             if (preg_match($pattern, $message, $match) !== 1) {
                 continue;
@@ -136,6 +245,85 @@ final readonly class IssueNormalizer
             $type = trim($match[$index]);
             if ($type !== '') {
                 return $type;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{0: string, 1: string}|null
+     */
+    private function extractExpectedAndInferredTypes(string $message): ?array
+    {
+        foreach ([
+            '/expects\s+(.+?)\s+given(?:\.|$)/i',
+        ] as $pattern) {
+            if (preg_match($pattern, $message, $match) !== 1) {
+                continue;
+            }
+
+            $pair = $this->splitTopLevelTypePair(trim($match[1]));
+            if ($pair !== null) {
+                return [$this->normalizeExpectedTypeCandidate($pair[0]), $pair[1]];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{0: string, 1: string}|null
+     */
+    private function splitTopLevelTypePair(string $candidate): ?array
+    {
+        $angleDepth = 0;
+        $braceDepth = 0;
+        $bracketDepth = 0;
+        $parenthesisDepth = 0;
+        $length = strlen($candidate);
+
+        for ($i = 0; $i < $length; ++$i) {
+            $character = $candidate[$i];
+
+            switch ($character) {
+                case '<':
+                    ++$angleDepth;
+                    break;
+                case '>':
+                    $angleDepth = max(0, $angleDepth - 1);
+                    break;
+                case '{':
+                    ++$braceDepth;
+                    break;
+                case '}':
+                    $braceDepth = max(0, $braceDepth - 1);
+                    break;
+                case '[':
+                    ++$bracketDepth;
+                    break;
+                case ']':
+                    $bracketDepth = max(0, $bracketDepth - 1);
+                    break;
+                case '(':
+                    ++$parenthesisDepth;
+                    break;
+                case ')':
+                    $parenthesisDepth = max(0, $parenthesisDepth - 1);
+                    break;
+                case ',':
+                    if ($angleDepth !== 0 || $braceDepth !== 0 || $bracketDepth !== 0 || $parenthesisDepth !== 0) {
+                        break;
+                    }
+
+                    $expectedType = trim(substr($candidate, 0, $i));
+                    $inferredType = trim(substr($candidate, $i + 1));
+
+                    if ($expectedType !== '' && $inferredType !== '') {
+                        return [$expectedType, $inferredType];
+                    }
+
+                    return null;
             }
         }
 
@@ -178,10 +366,22 @@ final readonly class IssueNormalizer
             );
         }
 
-        if (str_contains($kind, 'undefined')) {
+        if (
+            str_contains($kind, 'undefined')
+            || str_contains($kind, 'cannot call method')
+            || str_contains($kind, 'cannot access property')
+            || str_contains($kind, 'nonobject')
+        ) {
             return new FixHint(
                 rootCauseSummary: 'The inferred type does not define the accessed member.',
                 repairStrategySummary: 'Correct the source type or guard before member access.',
+            );
+        }
+
+        if (str_contains($kind, 'offsetaccess') || str_contains($kind, 'offset ')) {
+            return new FixHint(
+                rootCauseSummary: 'The inferred container type does not define the accessed offset.',
+                repairStrategySummary: 'Validate the container shape earlier or guard before reading the offset.',
             );
         }
 

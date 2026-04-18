@@ -47,3 +47,26 @@ jobs:
 
       - name: PHPStan (agent formatter dogfood)
         run: vendor/bin/phpstan analyse --configuration phpstan.neon.dist --error-format=agent --no-progress
+
+      - name: PHPStan (agent formatter fixture dogfood)
+        run: |
+          set +e
+          vendor/bin/phpstan analyse --configuration tests/Config/phpstan-agent-fixtures.neon --error-format=agent --no-progress > /tmp/phpstan-agent-fixtures.json
+          status=$?
+          set -e
+          test "$status" -eq 1
+          php -r '$payload = json_decode(file_get_contents("/tmp/phpstan-agent-fixtures.json"), true, 512, JSON_THROW_ON_ERROR); if (($payload["summary"]["totalIssues"] ?? 0) < 1) { fwrite(STDERR, "Expected fixture issues.\n"); exit(1); }'
+
+      - name: PHPStan (agent formatter clean fixture dogfood)
+        run: |
+          vendor/bin/phpstan analyse --configuration tests/Config/phpstan-agent-clean.neon --error-format=agent --no-progress > /tmp/phpstan-agent-clean.json
+          php -r '$payload = json_decode(file_get_contents("/tmp/phpstan-agent-clean.json"), true, 512, JSON_THROW_ON_ERROR); if (($payload["summary"]["totalIssues"] ?? -1) !== 0) { fwrite(STDERR, "Expected zero fixture issues.\n"); exit(1); }'
+
+      - name: PHPStan (agent formatter reduced fixture dogfood)
+        run: |
+          set +e
+          vendor/bin/phpstan analyse --configuration tests/Config/phpstan-agent-reduced.neon --error-format=agent --no-progress > /tmp/phpstan-agent-reduced.json
+          status=$?
+          set -e
+          test "$status" -eq 1
+          php -r '$payload = json_decode(file_get_contents("/tmp/phpstan-agent-reduced.json"), true, 512, JSON_THROW_ON_ERROR); if (($payload["summary"]["tokenStats"]["wasReduced"] ?? false) !== true) { fwrite(STDERR, "Expected reduced payload.\n"); exit(1); } if (($payload["summary"]["suppressedDuplicates"] ?? 0) < 1) { fwrite(STDERR, "Expected suppressed duplicates.\n"); exit(1); }'

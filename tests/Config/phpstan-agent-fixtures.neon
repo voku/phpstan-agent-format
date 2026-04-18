@@ -1,0 +1,23 @@
+includes:
+    - ../../extension.neon
+
+parameters:
+    level: max
+    paths:
+        - ../Fixture/Sample.php
+        - ../Fixture/MissingPropertyType.php
+        - ../Fixture/MissingParameterType.php
+        - ../Fixture/ArrayShapeReturn.php
+        - ../Fixture/GenericParameter.php
+        - ../Fixture/MethodOnString.php
+        - ../Fixture/NullCoalesceVariable.php
+        - ../Fixture/PropertyOnString.php
+        - ../Fixture/UndefinedProperty.php
+        - ../Fixture/UndefinedMethods.php
+        - ../Fixture/GenericReturn.php
+        - ../Fixture/IntersectionReturn.php
+        - ../Fixture/OffsetAccess.php
+    agentFormat:
+        outputMode: json
+        redactPatterns:
+            - '(?i)password\s*=\s*.+'

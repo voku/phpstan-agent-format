@@ -88,6 +88,197 @@ final class IssueNormalizerTest
                 return 'argument.type';
             }
         };
+        $genericParameterTypeError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 9;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Parameter #1 $items of function genericParameterFixture expects array<int, string>, array<string, int> given.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'argument.type';
+            }
+        };
+        $nonObjectMethodError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 8;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Cannot call method trim() on string.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'method.nonObject';
+            }
+        };
+        $arrayShapeReturnError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 8;
+            }
+
+            public function getMessage(): string
+            {
+                return "Function arrayShapeFixture() should return array{foo: int} but returns array{foo: 'x'}.";
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'return.type';
+            }
+        };
+        $nonObjectPropertyError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 8;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Cannot access property $length on string.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'property.nonObject';
+            }
+        };
+        $undefinedPropertyError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 8;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Access to an undefined property Demo::$missingProperty.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'property.notFound';
+            }
+        };
+        $offsetAccessError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 8;
+            }
+
+            public function getMessage(): string
+            {
+                return "Offset 'foo' does not exist on string.";
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'offsetAccess.notFound';
+            }
+        };
+        $returnedValueTipError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 9;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Parameter #1 $string of function strlen expects string, string|null given.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'argument.type';
+            }
+
+            public function getTip(): string
+            {
+                return 'See: remembering and forgetting returned values.';
+            }
+        };
+        $nonFileSpecificError = new class () {
+            public function getMessage(): string
+            {
+                return 'Global configuration is invalid.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'config.invalid';
+            }
+        };
 
         $normalizer = new IssueNormalizer(
             new ContextExtractor(new AgentFormatConfig('agentJson', 30, 3, 1, 1, false, true, 12000, [])),
@@ -98,6 +289,8 @@ final class IssueNormalizerTest
         $issue = $issues[0];
 
         TestCase::assertSame($fixtureFile, $issue->location->file, 'File path should prefer PHPStan filePath when available.');
+        TestCase::assertSame('string', $issue->symbolContext->expectedType, 'Expected type should be extracted from PHPStan messages.');
+        TestCase::assertSame('string', $issue->symbolContext->parameterName, 'Parameter names should be extracted from PHPStan messages.');
         TestCase::assertSame('string|null', $issue->symbolContext->inferredType, 'Given type should be extracted from PHPStan messages.');
         TestCase::assertSame('phpdoc', $issue->symbolContext->typeOrigin, 'PHPDoc type origin should be detected from PHPStan tips.');
         TestCase::assertSame(1, count($issue->secondaryLocations), 'Node origin should be promoted to a secondary location.');
@@ -116,6 +309,44 @@ final class IssueNormalizerTest
         TestCase::assertTrue($hasPhpDocHint, 'Context trace should include the PHPStan type-origin hint.');
 
         $parameterIssues = $normalizer->normalize(new AnalysisResult([$methodParameterTypeError], []));
+        TestCase::assertSame('value', $parameterIssues[0]->symbolContext->parameterName, 'Method parameter names should be exposed for repair suggestions.');
+        TestCase::assertSame('string', $parameterIssues[0]->symbolContext->expectedType, 'Method parameter messages should expose the expected type.');
         TestCase::assertSame('int', $parameterIssues[0]->symbolContext->inferredType, 'Parameter-focused PHPStan messages should also expose the given type.');
+
+        $genericParameterIssues = $normalizer->normalize(new AnalysisResult([$genericParameterTypeError], []));
+        TestCase::assertSame('items', $genericParameterIssues[0]->symbolContext->parameterName, 'Generic parameter messages should preserve the argument name.');
+        TestCase::assertSame('genericParameterFixture', $genericParameterIssues[0]->symbolContext->functionName, 'Generic parameter messages should preserve the function name.');
+        TestCase::assertSame('array<int, string>', $genericParameterIssues[0]->symbolContext->expectedType, 'Generic parameter messages should preserve expected types with nested commas.');
+        TestCase::assertSame('array<string, int>', $genericParameterIssues[0]->symbolContext->inferredType, 'Generic parameter messages should preserve inferred types with nested commas.');
+
+        $nonObjectIssues = $normalizer->normalize(new AnalysisResult([$nonObjectMethodError], []));
+        TestCase::assertSame('trim', $nonObjectIssues[0]->symbolContext->methodName, 'Non-object method access should expose the accessed member name.');
+        TestCase::assertSame('string', $nonObjectIssues[0]->symbolContext->inferredType, 'Non-object method access should expose the receiver type.');
+
+        $arrayShapeIssues = $normalizer->normalize(new AnalysisResult([$arrayShapeReturnError], []));
+        TestCase::assertSame('arrayShapeFixture', $arrayShapeIssues[0]->symbolContext->functionName, 'Return-type messages should preserve function names.');
+        TestCase::assertSame('array{foo: int}', $arrayShapeIssues[0]->symbolContext->expectedType, 'Return-type messages should expose expected return types.');
+        TestCase::assertSame("array{foo: 'x'}", $arrayShapeIssues[0]->symbolContext->inferredType, 'Return-type messages should expose actual return types.');
+
+        $nonObjectPropertyIssues = $normalizer->normalize(new AnalysisResult([$nonObjectPropertyError], []));
+        TestCase::assertSame('length', $nonObjectPropertyIssues[0]->symbolContext->propertyName, 'Non-object property access should expose the accessed property name.');
+        TestCase::assertSame('string', $nonObjectPropertyIssues[0]->symbolContext->inferredType, 'Non-object property access should expose the receiver type.');
+
+        $undefinedPropertyIssues = $normalizer->normalize(new AnalysisResult([$undefinedPropertyError], []));
+        TestCase::assertSame('Demo', $undefinedPropertyIssues[0]->symbolContext->className, 'Undefined property messages should preserve the declaring class.');
+        TestCase::assertSame('missingProperty', $undefinedPropertyIssues[0]->symbolContext->propertyName, 'Undefined property messages should expose the missing property name.');
+
+        $offsetAccessIssues = $normalizer->normalize(new AnalysisResult([$offsetAccessError], []));
+        TestCase::assertSame('string', $offsetAccessIssues[0]->symbolContext->inferredType, 'Offset-access messages should expose the container type.');
+        TestCase::assertSame('The inferred container type does not define the accessed offset.', $offsetAccessIssues[0]->fixHint->rootCauseSummary, 'Offset-access issues should provide a dedicated fix hint.');
+
+        $returnedValueIssues = $normalizer->normalize(new AnalysisResult([$returnedValueTipError], []));
+        TestCase::assertSame('returned-value', $returnedValueIssues[0]->symbolContext->typeOrigin, 'Returned-value hints should be surfaced as a dedicated type origin.');
+
+        $nonFileSpecificIssues = $normalizer->normalize(new AnalysisResult([], ['General PHPStan error.', $nonFileSpecificError]));
+        TestCase::assertSame(2, count($nonFileSpecificIssues), 'Non-file-specific errors should still be normalized.');
+        TestCase::assertSame('unknown.php', $nonFileSpecificIssues[0]->location->file, 'Non-file-specific errors should use the synthetic location.');
+        $nonFileSpecificMessages = array_map(static fn ($issue): string => $issue->message, $nonFileSpecificIssues);
+        TestCase::assertTrue(in_array('Global configuration is invalid.', $nonFileSpecificMessages, true), 'Object-shaped non-file-specific errors should preserve their message.');
     }
 }

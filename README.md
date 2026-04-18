@@ -45,7 +45,8 @@ Run:
 vendor/bin/phpstan analyse --error-format=agent
 ```
 
-The repository CI dogfoods both modes by running PHPStan once with the default formatter and once with `--error-format=agent`.
+The repository CI dogfoods both modes by running PHPStan once with the default formatter, once with `--error-format=agent` on the library itself, and again against committed failing/clean fixture configs that exercise the agent envelope on real PHPStan fixture output.
+The bundled extension also declares the `agentFormat` config schema, so real fixture configs can pass formatter options directly through PHPStan.
 
 ## Output modes
 
@@ -57,6 +58,8 @@ The repository CI dogfoods both modes by running PHPStan once with the default f
 Accepted aliases for `outputMode`: `json`, `ndjson`, `markdown`, `compact`.
 
 ## Envelope shape (JSON)
+
+Representative issues include structured repair hints inside `symbolContext`, including the targeted parameter/property plus expected and inferred types when PHPStan exposes them.
 
 ```json
 {
@@ -104,6 +107,7 @@ Cluster kinds include:
 - missing type declaration
 - array shape drift
 - undefined member from inferred type
+- invalid offset access
 - stale ignore/baseline noise
 - fallback: repeated same-rule same-symbol
 

@@ -87,7 +87,17 @@ final class ContextTraceBuilder
 
     private function bestSymbol(SymbolContext $symbolContext): ?string
     {
-        return $symbolContext->methodName ?? $symbolContext->propertyName ?? $symbolContext->functionName ?? $symbolContext->className;
+        if ($symbolContext->methodName !== null && $symbolContext->parameterName !== null) {
+            return sprintf('%s($%s)', $symbolContext->methodName, $symbolContext->parameterName);
+        }
+
+        if ($symbolContext->propertyName !== null) {
+            return $symbolContext->className !== null
+                ? sprintf('%s::$%s', $symbolContext->className, $symbolContext->propertyName)
+                : '$' . $symbolContext->propertyName;
+        }
+
+        return $symbolContext->methodName ?? $symbolContext->functionName ?? $symbolContext->className;
     }
 
     private function describeNodeType(?string $nodeType): string

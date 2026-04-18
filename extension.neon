@@ -1,3 +1,15 @@
+parameters:
+    agentFormat:
+        outputMode: agentJson
+        maxClusters: 30
+        maxIssuesPerCluster: 3
+        snippetLinesBefore: 2
+        snippetLinesAfter: 3
+        includeDocblock: false
+        includeRelatedDefinition: true
+        tokenBudget: 12000
+        redactPatterns: []
+
 services:
     errorFormatter.agent:
         class: Voku\PhpstanAgentFormat\Formatter\AgentErrorFormatter
@@ -5,3 +17,16 @@ services:
             parameters: %parameters%
         tags:
             - phpstan.errorFormatter
+
+parametersSchema:
+    agentFormat: structure([
+        outputMode: string()
+        maxClusters: int()
+        maxIssuesPerCluster: int()
+        snippetLinesBefore: int()
+        snippetLinesAfter: int()
+        includeDocblock: bool()
+        includeRelatedDefinition: bool()
+        tokenBudget: int()
+        redactPatterns: listOf(string())
+    ])

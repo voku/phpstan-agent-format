@@ -22,6 +22,7 @@ final readonly class IssueClusterer
         'nullableType' => 'nullableType',
         'nullCoalesce' => 'nullCoalesce',
         'nullsafe' => 'nullsafe',
+        'offsetAccess' => 'offsetAccess',
     ];
 
     public function __construct(private AgentFormatConfig $config)
@@ -98,7 +99,11 @@ final readonly class IssueClusterer
             str_contains($haystack, 'null') => 'nullable-propagation',
             str_contains($haystack, 'missing') && str_contains($haystack, 'type') => 'missing-type-declaration',
             str_contains($haystack, 'array{') || str_contains($haystack, 'array shape') => 'array-shape-drift',
-            str_contains($haystack, 'undefined property') || str_contains($haystack, 'undefined method') => 'undefined-member-from-inferred-type',
+            str_contains($haystack, 'undefined property')
+                || str_contains($haystack, 'undefined method')
+                || str_contains($haystack, 'cannot call method')
+                || str_contains($haystack, 'cannot access property') => 'undefined-member-from-inferred-type',
+            str_contains($haystack, 'offset ') || str_contains($haystack, 'offsetaccess') => 'invalid-offset-access',
             str_contains($haystack, 'ignore') || str_contains($haystack, 'baseline') => 'stale-ignore-noise',
             default => 'same-rule-same-symbol',
         };
@@ -121,6 +126,7 @@ final readonly class IssueClusterer
             'missingType' => 'missing-type-declaration',
             'ignore' => 'stale-ignore-noise',
             'nullableType', 'nullCoalesce', 'nullsafe' => 'nullable-propagation',
+            'offsetAccess' => 'invalid-offset-access',
             default => null,
         };
     }
