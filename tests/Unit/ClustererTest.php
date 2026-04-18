@@ -30,7 +30,7 @@ final class ClustererTest
         TestCase::assertSame(1, $clusters[0]->suppressedDuplicateCount, 'Duplicates should be counted as suppressed.');
 
         $missingPropertyType = self::issue('c', 20, 'Property Foo::$bar has no type specified.', 'missingType.property', 'missingType.property');
-        $missingMethodType = self::issue('d', 21, 'Method Foo::run() has no return type specified.', 'missingType.return', 'missingType.return');
+        $missingMethodType = self::issue('d', 21, 'Method Foo::run() has no return type specified.', 'missingType.return', 'missingType.parameter');
 
         $identifierClusters = $clusterer->cluster([$missingPropertyType, $missingMethodType]);
         TestCase::assertSame(1, count($identifierClusters), 'Issues in the same PHPStan identifier family should cluster together.');

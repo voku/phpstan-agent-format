@@ -10,6 +10,17 @@ use Voku\PhpstanAgentFormat\Dto\IssueCluster;
 
 final readonly class IssueClusterer
 {
+    /**
+     * @var array<string, string>
+     */
+    private const IDENTIFIER_FAMILY_GROUPS = [
+        'missingType' => 'missingType.*',
+        'ignore' => 'ignore.*',
+        'nullableType' => 'nullableType.*',
+        'nullCoalesce' => 'nullCoalesce.*',
+        'nullsafe' => 'nullsafe.*',
+    ];
+
     public function __construct(private AgentFormatConfig $config)
     {
     }
@@ -94,14 +105,7 @@ final readonly class IssueClusterer
     {
         $identifierGroup = $this->identifierGroup($ruleIdentifier);
 
-        return match (true) {
-            $identifierGroup === 'missingType' => 'missingType.*',
-            $identifierGroup === 'ignore' => 'ignore.*',
-            $identifierGroup === 'nullableType' => 'nullableType.*',
-            $identifierGroup === 'nullCoalesce' => 'nullCoalesce.*',
-            $identifierGroup === 'nullsafe' => 'nullsafe.*',
-            default => $ruleIdentifier ?? $kind,
-        };
+        return self::IDENTIFIER_FAMILY_GROUPS[$identifierGroup] ?? $ruleIdentifier ?? $kind;
     }
 
     private function kindFromIdentifier(?string $ruleIdentifier): ?string
@@ -129,13 +133,6 @@ final readonly class IssueClusterer
     {
         $group = $this->identifierGroup($typeOrigin);
 
-        return match (true) {
-            $group === 'missingType' => 'missingType.*',
-            $group === 'ignore' => 'ignore.*',
-            $group === 'nullableType' => 'nullableType.*',
-            $group === 'nullCoalesce' => 'nullCoalesce.*',
-            $group === 'nullsafe' => 'nullsafe.*',
-            default => $typeOrigin ?? '_origin',
-        };
+        return self::IDENTIFIER_FAMILY_GROUPS[$group] ?? $typeOrigin ?? '_origin';
     }
 }
