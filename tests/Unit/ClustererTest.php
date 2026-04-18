@@ -28,16 +28,29 @@ final class ClustererTest
         TestCase::assertSame(1, count($clusters), 'Related issues should cluster together.');
         TestCase::assertSame(1, count($clusters[0]->representativeIssues), 'Representative issue limit should apply.');
         TestCase::assertSame(1, $clusters[0]->suppressedDuplicateCount, 'Duplicates should be counted as suppressed.');
+
+        $missingPropertyType = self::issue('c', 20, 'Property Foo::$bar has no type specified.', 'missingType.property', 'missingType.property');
+        $missingMethodType = self::issue('d', 21, 'Method Foo::run() has no return type specified.', 'missingType.return', 'missingType.return');
+
+        $identifierClusters = $clusterer->cluster([$missingPropertyType, $missingMethodType]);
+        TestCase::assertSame(1, count($identifierClusters), 'Issues in the same PHPStan identifier family should cluster together.');
+        TestCase::assertSame('missing-type-declaration', $identifierClusters[0]->kind, 'Identifier families should drive stable cluster kinds.');
     }
 
-    private static function issue(string $id, int $line): AgentIssue
+    private static function issue(
+        string $id,
+        int $line,
+        string $message = 'Call to an undefined method Foo::bar()',
+        ?string $ruleIdentifier = 'method.undefined',
+        ?string $typeOrigin = 'method.undefined',
+    ): AgentIssue
     {
         return new AgentIssue(
             id: $id,
-            message: 'Call to an undefined method Foo::bar()',
-            ruleIdentifier: 'method.undefined',
+            message: $message,
+            ruleIdentifier: $ruleIdentifier,
             location: new FileLocation('/tmp/a.php', $line),
-            symbolContext: new SymbolContext('Foo', 'Foo::bar', null, null, 'Foo', 'method.undefined'),
+            symbolContext: new SymbolContext('Foo', 'Foo::bar', null, null, 'Foo', $typeOrigin),
             snippet: new CodeSnippet($line, $line, ['foo();']),
             contextTrace: new ContextTrace([]),
             fixHint: new FixHint('wrong inferred type', 'add guard or fix upstream type'),

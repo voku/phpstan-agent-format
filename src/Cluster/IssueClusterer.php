@@ -26,13 +26,14 @@ final readonly class IssueClusterer
             $kind = $this->detectKind($issue);
             $symbol = $issue->symbolContext->methodName ?? $issue->symbolContext->propertyName ?? $issue->symbolContext->className ?? '_none';
             $lineBucket = (int) floor($issue->location->line / 10);
+            $groupingIdentifier = $this->groupingIdentifier($issue->ruleIdentifier, $kind);
             $key = implode('|', [
                 $kind,
-                $issue->ruleIdentifier ?? '_rule',
+                $groupingIdentifier,
                 $symbol,
                 $issue->location->file,
                 (string) $lineBucket,
-                $issue->symbolContext->typeOrigin ?? '_origin',
+                $this->groupingTypeOrigin($issue->symbolContext->typeOrigin),
             ]);
 
             $groups[$key][] = $issue;
@@ -72,6 +73,11 @@ final readonly class IssueClusterer
 
     private function detectKind(AgentIssue $issue): string
     {
+        $identifierKind = $this->kindFromIdentifier($issue->ruleIdentifier);
+        if ($identifierKind !== null) {
+            return $identifierKind;
+        }
+
         $haystack = strtolower(($issue->ruleIdentifier ?? '') . ' ' . $issue->message);
 
         return match (true) {
@@ -81,6 +87,55 @@ final readonly class IssueClusterer
             str_contains($haystack, 'undefined property') || str_contains($haystack, 'undefined method') => 'undefined-member-from-inferred-type',
             str_contains($haystack, 'ignore') || str_contains($haystack, 'baseline') => 'stale-ignore-noise',
             default => 'same-rule-same-symbol',
+        };
+    }
+
+    private function groupingIdentifier(?string $ruleIdentifier, string $kind): string
+    {
+        $identifierGroup = $this->identifierGroup($ruleIdentifier);
+
+        return match (true) {
+            $identifierGroup === 'missingType' => 'missingType.*',
+            $identifierGroup === 'ignore' => 'ignore.*',
+            $identifierGroup === 'nullableType' => 'nullableType.*',
+            $identifierGroup === 'nullCoalesce' => 'nullCoalesce.*',
+            $identifierGroup === 'nullsafe' => 'nullsafe.*',
+            default => $ruleIdentifier ?? $kind,
+        };
+    }
+
+    private function kindFromIdentifier(?string $ruleIdentifier): ?string
+    {
+        return match ($this->identifierGroup($ruleIdentifier)) {
+            'missingType' => 'missing-type-declaration',
+            'ignore' => 'stale-ignore-noise',
+            'nullableType', 'nullCoalesce', 'nullsafe' => 'nullable-propagation',
+            default => null,
+        };
+    }
+
+    private function identifierGroup(?string $ruleIdentifier): ?string
+    {
+        if ($ruleIdentifier === null || $ruleIdentifier === '') {
+            return null;
+        }
+
+        $parts = explode('.', $ruleIdentifier, 2);
+
+        return $parts[0] !== '' ? $parts[0] : null;
+    }
+
+    private function groupingTypeOrigin(?string $typeOrigin): string
+    {
+        $group = $this->identifierGroup($typeOrigin);
+
+        return match (true) {
+            $group === 'missingType' => 'missingType.*',
+            $group === 'ignore' => 'ignore.*',
+            $group === 'nullableType' => 'nullableType.*',
+            $group === 'nullCoalesce' => 'nullCoalesce.*',
+            $group === 'nullsafe' => 'nullsafe.*',
+            default => $typeOrigin ?? '_origin',
         };
     }
 }
