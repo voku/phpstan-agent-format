@@ -39,6 +39,10 @@ final class ClustererTest
         $nonObjectMethod = self::issue('e', 22, 'Cannot call method trim() on string.', 'method.nonObject', 'method.nonObject');
         $nonObjectClusters = $clusterer->cluster([$nonObjectMethod]);
         TestCase::assertSame('undefined-member-from-inferred-type', $nonObjectClusters[0]->kind, 'Non-object member access should reuse the inferred-member cluster kind.');
+
+        $offsetAccess = self::issue('f', 24, "Offset 'foo' does not exist on string.", 'offsetAccess.notFound', 'offsetAccess.notFound');
+        $offsetClusters = $clusterer->cluster([$offsetAccess]);
+        TestCase::assertSame('invalid-offset-access', $offsetClusters[0]->kind, 'Offset-access errors should get a dedicated cluster kind.');
     }
 
     private static function issue(

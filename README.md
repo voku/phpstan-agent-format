@@ -107,6 +107,7 @@ Cluster kinds include:
 - missing type declaration
 - array shape drift
 - undefined member from inferred type
+- invalid offset access
 - stale ignore/baseline noise
 - fallback: repeated same-rule same-symbol
 

@@ -23,6 +23,8 @@ final readonly class IssueNormalizer
         '/expects\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
         '/should return\s+(.+?)\s+but returns\s+(.+?)(?:\.|$)/i' => 2,
         '/cannot call method [A-Za-z_][A-Za-z0-9_]*\(\) on\s+(.+?)(?:\.|$)/i' => 1,
+        '/cannot access property \$[A-Za-z_][A-Za-z0-9_]* on\s+(.+?)(?:\.|$)/i' => 1,
+        '/offset\s+.+?\s+does not exist on\s+(.+?)(?:\.|$)/i' => 1,
         '/does not accept(?: default value of type| value of type)?\s+(.+?)(?:\.|$)/i' => 1,
         '/with type\s+(.+?)\s+is not subtype of(?: native)? type\s+.+?(?:\.|$)/i' => 1,
     ];
@@ -134,6 +136,10 @@ final readonly class IssueNormalizer
     {
         if (preg_match('/property\s+([\\\\\w]+)::\$([A-Za-z_][A-Za-z0-9_]*)/i', $message, $match) === 1) {
             return [$match[1], $match[2]];
+        }
+
+        if (preg_match('/cannot access property\s+\$([A-Za-z_][A-Za-z0-9_]*)\s+on\s+.+?(?:\.|$)/i', $message, $match) === 1) {
+            return [null, $match[1]];
         }
 
         return [null, null];
@@ -280,6 +286,13 @@ final readonly class IssueNormalizer
             return new FixHint(
                 rootCauseSummary: 'The inferred type does not define the accessed member.',
                 repairStrategySummary: 'Correct the source type or guard before member access.',
+            );
+        }
+
+        if (str_contains($kind, 'offsetaccess') || str_contains($kind, 'offset ')) {
+            return new FixHint(
+                rootCauseSummary: 'The inferred container type does not define the accessed offset.',
+                repairStrategySummary: 'Validate the container shape earlier or guard before reading the offset.',
             );
         }
 
