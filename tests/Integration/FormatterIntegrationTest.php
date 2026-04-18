@@ -73,7 +73,7 @@ final class FormatterIntegrationTest
         $exitCode = $formatter->formatErrors($analysis, $output);
         TestCase::assertSame(1, $exitCode, 'Formatter should return non-zero when issues exist.');
 
-        /** @var array{tool: string, version: string, schema: array{version:string}, summary: array{totalIssues: int}, clusters: list<array{representativeIssues: list<array{symbolContext: array{parameterName: ?string, expectedType: ?string, inferredType: ?string, typeOrigin: ?string}, secondaryLocations: list<array{file: string, line: int}>, contextTrace: array{hops: list<array{kind:string,summary: string}>}}>}>} $decoded */
+        /** @var array{tool: string, version: string, schema: array{name:string, version:string}, summary: array{totalIssues: int}, clusters: list<array{representativeIssues: list<array{symbolContext: array{parameterName: ?string, expectedType: ?string, inferredType: ?string, typeOrigin: ?string}, secondaryLocations: list<array{file: string, line: int}>, contextTrace: array{hops: list<array{kind:string,summary: string}>}}>}>} $decoded */
         $decoded = json_decode($output->buffer, true, 512, JSON_THROW_ON_ERROR);
         TestCase::assertSame('phpstan-agent-format', $decoded['tool'], 'Tool name should be stable.');
         TestCase::assertSame('2.0.0', $decoded['version'], 'Envelope version should reflect the v2 schema.');

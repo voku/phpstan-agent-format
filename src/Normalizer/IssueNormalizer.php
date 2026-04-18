@@ -117,7 +117,7 @@ final readonly class IssueNormalizer
     }
 
     /**
-     * @param array<string, mixed> $metadata
+     * @param array<array-key, mixed> $metadata
      */
     private function extractSymbolContext(string $message, ?string $ruleIdentifier, ?string $tip = null, array $metadata = []): SymbolContext
     {
@@ -147,7 +147,7 @@ final readonly class IssueNormalizer
     }
 
     /**
-     * @param array<string, mixed> $metadata
+     * @param array<array-key, mixed> $metadata
      * @return array{
      *     className:?string,
      *     methodName:?string,
@@ -187,18 +187,18 @@ final readonly class IssueNormalizer
     }
 
     /**
-     * @param array<string, mixed> $metadata
+     * @param array<array-key, mixed> $metadata
      * @param list<string> $aliases
      */
     private function findMetadataString(array $metadata, array $aliases): ?string
     {
         foreach ($metadata as $key => $value) {
-            if (in_array($key, $aliases, true) && is_string($value) && trim($value) !== '') {
+            if (is_string($key) && in_array($key, $aliases, true) && is_string($value) && trim($value) !== '') {
                 return trim($value);
             }
 
             if (is_array($value)) {
-                $nested = $this->findMetadataString(MetadataNormalizer::normalize($value), $aliases);
+                $nested = $this->findMetadataString($value, $aliases);
                 if ($nested !== null) {
                     return $nested;
                 }
@@ -555,7 +555,7 @@ final readonly class IssueNormalizer
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     private function getArray(object $object, string $method): array
     {
@@ -580,8 +580,7 @@ final readonly class IssueNormalizer
             return false;
         }
 
-        return preg_match('/[A-Za-z_\\\\]+\s*<.+>/', $message) === 1
-            || preg_match('/array<.+>/', $message) === 1;
+        return preg_match('/[A-Za-z_\\\\]+\s*<.+>/', $message) === 1;
     }
 
 }

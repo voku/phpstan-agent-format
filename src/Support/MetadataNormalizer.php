@@ -8,14 +8,14 @@ final class MetadataNormalizer
 {
     /**
      * @param array<mixed> $metadata
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public static function normalize(array $metadata): array
     {
         $normalized = [];
 
         foreach ($metadata as $key => $value) {
-            if (!is_string($key) || $key === '') {
+            if (is_string($key) && $key === '') {
                 continue;
             }
 

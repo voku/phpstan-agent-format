@@ -395,6 +395,55 @@ final class IssueNormalizerTest
         TestCase::assertSame('array<string, int>', $metadataIssues[0]->symbolContext->inferredType, 'Metadata-backed inferred types should be preserved.');
         TestCase::assertSame('metadata', $metadataIssues[0]->symbolContext->typeOrigin, 'Metadata-backed type origins should be surfaced.');
 
+        $metadataListError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 9;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Generic mismatch in list metadata.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'argument.type';
+            }
+
+            /**
+             * @return array<string, mixed>
+             */
+            public function getMetadata(): array
+            {
+                return [
+                    'candidates' => [
+                        [
+                            'parameterName' => '$items',
+                            'expectedType' => 'array<int, string>',
+                        ],
+                        [
+                            'inferredType' => 'array<string, int>',
+                        ],
+                    ],
+                ];
+            }
+        };
+
+        $metadataListIssues = $normalizer->normalize(new AnalysisResult([$metadataListError], []));
+        TestCase::assertSame('items', $metadataListIssues[0]->symbolContext->parameterName, 'Metadata normalization should preserve nested list entries.');
+        TestCase::assertSame('array<int, string>', $metadataListIssues[0]->symbolContext->expectedType, 'List-based metadata should preserve expected types.');
+        TestCase::assertSame('array<string, int>', $metadataListIssues[0]->symbolContext->inferredType, 'List-based metadata should preserve inferred types.');
+
         $returnedValueIssues = $normalizer->normalize(new AnalysisResult([$returnedValueTipError], []));
         TestCase::assertSame('returned-value', $returnedValueIssues[0]->symbolContext->typeOrigin, 'Returned-value hints should be surfaced as a dedicated type origin.');
 

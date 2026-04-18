@@ -7,7 +7,7 @@ namespace Voku\PhpstanAgentFormat\Ingestion;
 final readonly class ImportedPhpstanError
 {
     /**
-     * @param array<string, mixed> $metadata
+     * @param array<array-key, mixed> $metadata
      */
     public function __construct(
         private string $message,
@@ -53,7 +53,7 @@ final readonly class ImportedPhpstanError
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public function getMetadata(): array
     {
