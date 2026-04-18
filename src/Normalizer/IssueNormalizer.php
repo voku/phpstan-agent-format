@@ -19,7 +19,7 @@ final readonly class IssueNormalizer
      * @var array<string, 1|2>
      */
     private const INFERRED_TYPE_PATTERNS = [
-        '/expects parameter .*? to be\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
+        '/expects parameter [^,]+?(?:\s+to be)?\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
         '/expects\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
         '/does not accept(?: default value of type| value of type)?\s+(.+?)(?:\.|$)/i' => 1,
         '/with type\s+(.+?)\s+is not subtype of(?: native)? type\s+.+?(?:\.|$)/i' => 1,
@@ -29,7 +29,7 @@ final readonly class IssueNormalizer
      * @var array<string, 1>
      */
     private const EXPECTED_TYPE_PATTERNS = [
-        '/expects parameter .*? to be\s+(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
+        '/expects parameter [^,]+?(?:\s+to be)?\s+(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
         '/expects\s+(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
     ];
 
@@ -189,13 +189,23 @@ final readonly class IssueNormalizer
                 continue;
             }
 
-            $type = trim($match[$index]);
+            $type = $this->normalizeExpectedTypeCandidate($match[$index]);
             if ($type !== '') {
                 return $type;
             }
         }
 
         return null;
+    }
+
+    private function normalizeExpectedTypeCandidate(string $candidate): string
+    {
+        $candidate = trim($candidate);
+        if (preg_match('/\bto be\s+(.+)$/i', $candidate, $match) === 1) {
+            return trim($match[1]);
+        }
+
+        return $candidate;
     }
 
     private function extractInferredType(string $message): ?string
