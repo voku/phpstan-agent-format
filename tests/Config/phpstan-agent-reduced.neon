@@ -1,0 +1,10 @@
+includes:
+    - ../../extension.neon
+
+parameters:
+    level: max
+    paths:
+        - ../Fixture/DuplicateUndefinedMethod.php
+    agentFormat:
+        outputMode: json
+        tokenBudget: 1
