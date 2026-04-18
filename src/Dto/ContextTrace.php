@@ -14,7 +14,7 @@ final readonly class ContextTrace
     }
 
     /**
-     * @return array{hops:list<array{location:array{file:string,line:int},summary:string,symbol:?string,ruleIdentifier:?string}>}
+     * @return array{hops:list<array{kind:string,location:array{file:string,line:int},summary:string,symbol:?string,ruleIdentifier:?string}>}
      */
     public function toArray(): array
     {

@@ -103,6 +103,7 @@ final class PhpstanCliBlindSpotMatrixTest
             $genericReturn = $issuesByMessage['Function genericReturnFixture() should return array<int, string> but returns array<string, int>.'] ?? null;
             TestCase::assertTrue(is_array($genericReturn), 'Generic-return fixture should be present.');
             /** @var array{message: string, symbolContext: array{className: ?string, methodName: ?string, propertyName: ?string, functionName: ?string, expectedType: ?string, inferredType: ?string}, rootCauseSummary: string} $genericReturn */
+            TestCase::assertSame('generic-template-drift', $kindsByMessage[$genericReturn['message']], 'Generic return mismatches should use the dedicated generic drift cluster.');
             TestCase::assertSame('genericReturnFixture', $genericReturn['symbolContext']['functionName'], 'Generic return mismatches should preserve function names.');
             TestCase::assertSame('array<int, string>', $genericReturn['symbolContext']['expectedType'], 'Generic return mismatches should preserve expected types.');
             TestCase::assertSame('array<string, int>', $genericReturn['symbolContext']['inferredType'], 'Generic return mismatches should preserve inferred types.');

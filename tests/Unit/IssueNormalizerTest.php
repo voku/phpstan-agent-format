@@ -296,6 +296,7 @@ final class IssueNormalizerTest
         TestCase::assertSame(1, count($issue->secondaryLocations), 'Node origin should be promoted to a secondary location.');
         TestCase::assertSame(7, $issue->secondaryLocations[0]->line, 'Node line should be preserved for deeper tracing.');
         TestCase::assertTrue(count($issue->snippet->lines) > 0, 'Snippet extraction should use the actionable file path.');
+        TestCase::assertSame('primary', $issue->contextTrace->hops[0]->kind, 'Context hops should expose stable kinds.');
 
         $summaries = array_map(static fn ($hop): string => $hop->summary, $issue->contextTrace->hops);
         $hasNodeContext = false;
@@ -338,6 +339,60 @@ final class IssueNormalizerTest
 
         $offsetAccessIssues = $normalizer->normalize(new AnalysisResult([$offsetAccessError], []));
         TestCase::assertSame('string', $offsetAccessIssues[0]->symbolContext->inferredType, 'Offset-access messages should expose the container type.');
+
+        $metadataRichError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 9;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Generic mismatch.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'argument.type';
+            }
+
+            /**
+             * @return array<string, mixed>
+             */
+            public function getMetadata(): array
+            {
+                return [
+                    'symbol' => [
+                        'className' => 'MetadataDemo',
+                        'methodName' => 'repair',
+                        'parameterName' => '$payload',
+                    ],
+                    'types' => [
+                        'expectedType' => 'array<int, string>',
+                        'inferredType' => 'array<string, int>',
+                    ],
+                    'origin' => [
+                        'typeOrigin' => 'metadata',
+                    ],
+                ];
+            }
+        };
+
+        $metadataIssues = $normalizer->normalize(new AnalysisResult([$metadataRichError], []));
+        TestCase::assertSame('MetadataDemo::repair', $metadataIssues[0]->symbolContext->methodName, 'Metadata-backed method names should be preferred over message heuristics.');
+        TestCase::assertSame('payload', $metadataIssues[0]->symbolContext->parameterName, 'Metadata-backed parameter names should be normalized.');
+        TestCase::assertSame('array<int, string>', $metadataIssues[0]->symbolContext->expectedType, 'Metadata-backed expected types should be preserved.');
+        TestCase::assertSame('array<string, int>', $metadataIssues[0]->symbolContext->inferredType, 'Metadata-backed inferred types should be preserved.');
+        TestCase::assertSame('metadata', $metadataIssues[0]->symbolContext->typeOrigin, 'Metadata-backed type origins should be surfaced.');
         TestCase::assertSame('The inferred container type does not define the accessed offset.', $offsetAccessIssues[0]->fixHint->rootCauseSummary, 'Offset-access issues should provide a dedicated fix hint.');
 
         $returnedValueIssues = $normalizer->normalize(new AnalysisResult([$returnedValueTipError], []));

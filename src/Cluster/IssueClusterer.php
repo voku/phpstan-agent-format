@@ -93,6 +93,10 @@ final readonly class IssueClusterer
             return $identifierKind;
         }
 
+        if ($this->isGenericTemplateDrift($issue)) {
+            return 'generic-template-drift';
+        }
+
         $haystack = strtolower(($issue->ruleIdentifier ?? '') . ' ' . $issue->message);
 
         return match (true) {
@@ -151,5 +155,29 @@ final readonly class IssueClusterer
         }
 
         return $typeOrigin ?? '_origin';
+    }
+
+    private function isGenericTemplateDrift(AgentIssue $issue): bool
+    {
+        $expected = $issue->symbolContext->expectedType;
+        $inferred = $issue->symbolContext->inferredType;
+        $haystack = strtolower(($issue->ruleIdentifier ?? '') . ' ' . $issue->message);
+
+        if (str_contains($haystack, 'template')) {
+            return true;
+        }
+
+        if ($expected === null || $inferred === null || $expected === $inferred) {
+            return false;
+        }
+
+        return (
+            preg_match('/[A-Za-z_\\\\]+\s*<.+>/', $expected) === 1
+            && preg_match('/[A-Za-z_\\\\]+\s*<.+>/', $inferred) === 1
+        )
+            || (
+                str_starts_with($expected, 'array<')
+                && str_starts_with($inferred, 'array<')
+            );
     }
 }

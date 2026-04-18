@@ -45,9 +45,22 @@ final readonly class IssueNormalizer
      */
     public function normalize(AnalysisResult $analysisResult): array
     {
+        return $this->normalizeRaw(
+            $analysisResult->getFileSpecificErrors(),
+            $analysisResult->getNotFileSpecificErrors(),
+        );
+    }
+
+    /**
+     * @param list<object> $fileSpecificErrors
+     * @param list<object|string> $notFileSpecificErrors
+     * @return list<AgentIssue>
+     */
+    public function normalizeRaw(array $fileSpecificErrors, array $notFileSpecificErrors = []): array
+    {
         $issues = [];
 
-        foreach ($analysisResult->getFileSpecificErrors() as $index => $error) {
+        foreach ($fileSpecificErrors as $index => $error) {
             $file = $this->getString($error, 'getFile', 'unknown.php');
             $filePath = $this->getNullableString($error, 'getFilePath') ?? $file;
             $traitFilePath = $this->getNullableString($error, 'getTraitFilePath');
@@ -57,11 +70,12 @@ final readonly class IssueNormalizer
             $message = $this->getString($error, 'getMessage', 'Unknown PHPStan error.');
             $ruleIdentifier = $this->getNullableString($error, 'getIdentifier');
             $tip = $this->getNullableString($error, 'getTip');
+            $metadata = $this->getArray($error, 'getMetadata');
 
             $location = new FileLocation($filePath, $line);
             $nodeLocation = $nodeLine !== null && $nodeLine !== $line ? new FileLocation($filePath, $this->normalizeLineNumber($nodeLine)) : null;
             $traitLocation = $traitFilePath !== null && $nodeLine !== null ? new FileLocation($traitFilePath, $this->normalizeLineNumber($nodeLine)) : null;
-            $symbolContext = $this->extractSymbolContext($message, $ruleIdentifier, $tip);
+            $symbolContext = $this->extractSymbolContext($message, $ruleIdentifier, $tip, $metadata);
             $snippet = $this->contextExtractor->extractSnippet($filePath, $line);
             $fixHint = $this->createFixHint($message, $ruleIdentifier);
 
@@ -78,7 +92,7 @@ final readonly class IssueNormalizer
             );
         }
 
-        foreach ($analysisResult->getNotFileSpecificErrors() as $index => $error) {
+        foreach ($notFileSpecificErrors as $index => $error) {
             $message = is_string($error) ? $error : $this->getString($error, 'getMessage', 'General PHPStan error.');
             $ruleIdentifier = is_string($error) ? null : $this->getNullableString($error, 'getIdentifier');
             $location = new FileLocation('unknown.php', 1);
@@ -101,17 +115,23 @@ final readonly class IssueNormalizer
         return $issues;
     }
 
-    private function extractSymbolContext(string $message, ?string $ruleIdentifier, ?string $tip = null): SymbolContext
+    /**
+     * @param array<string, mixed> $metadata
+     */
+    private function extractSymbolContext(string $message, ?string $ruleIdentifier, ?string $tip = null, array $metadata = []): SymbolContext
     {
         [$class, $property] = $this->extractPropertyContext($message);
         $method = $this->extractMethodName($message);
         $function = $this->extractFunctionName($message);
         $parameter = $this->extractParameterName($message);
         $expectedAndInferredTypes = $this->extractExpectedAndInferredTypes($message);
+        $metadataSymbolContext = $this->extractMetadataSymbolContext($metadata);
 
-        if ($class === null) {
-            $class = $this->extractClassName($message);
-        }
+        $class = $metadataSymbolContext['className'] ?? $class ?? $this->extractClassName($message);
+        $property = $metadataSymbolContext['propertyName'] ?? $property;
+        $method = $metadataSymbolContext['methodName'] ?? $method;
+        $function = $metadataSymbolContext['functionName'] ?? $function;
+        $parameter = $metadataSymbolContext['parameterName'] ?? $parameter;
 
         return new SymbolContext(
             className: $class,
@@ -119,10 +139,72 @@ final readonly class IssueNormalizer
             propertyName: $property,
             functionName: $function,
             parameterName: $parameter,
-            expectedType: $this->extractExpectedType($message, $expectedAndInferredTypes),
-            inferredType: $this->extractInferredType($message, $expectedAndInferredTypes),
-            typeOrigin: $this->extractTypeOrigin($ruleIdentifier, $tip),
+            expectedType: $metadataSymbolContext['expectedType'] ?? $this->extractExpectedType($message, $expectedAndInferredTypes),
+            inferredType: $metadataSymbolContext['inferredType'] ?? $this->extractInferredType($message, $expectedAndInferredTypes),
+            typeOrigin: $metadataSymbolContext['typeOrigin'] ?? $this->extractTypeOrigin($ruleIdentifier, $tip),
         );
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     * @return array{
+     *     className:?string,
+     *     methodName:?string,
+     *     propertyName:?string,
+     *     functionName:?string,
+     *     parameterName:?string,
+     *     expectedType:?string,
+     *     inferredType:?string,
+     *     typeOrigin:?string
+     * }
+     */
+    private function extractMetadataSymbolContext(array $metadata): array
+    {
+        $className = $this->findMetadataString($metadata, ['className', 'class', 'declaringClass', 'class_name']);
+        $methodName = $this->findMetadataString($metadata, ['methodName', 'method', 'memberName', 'method_name']);
+        $propertyName = $this->findMetadataString($metadata, ['propertyName', 'property', 'property_name']);
+        $functionName = $this->findMetadataString($metadata, ['functionName', 'function', 'function_name']);
+        $parameterName = $this->findMetadataString($metadata, ['parameterName', 'parameter', 'argumentName', 'argument', 'parameter_name']);
+        $expectedType = $this->findMetadataString($metadata, ['expectedType', 'expected', 'acceptedType', 'targetType', 'expected_type']);
+        $inferredType = $this->findMetadataString($metadata, ['inferredType', 'actualType', 'givenType', 'receivedType', 'valueType', 'inferred_type']);
+        $typeOrigin = $this->findMetadataString($metadata, ['typeOrigin', 'origin', 'typeSource', 'source']);
+
+        if ($className !== null && $methodName !== null && !str_contains($methodName, '::')) {
+            $methodName = $className . '::' . ltrim($methodName, ':');
+        }
+
+        return [
+            'className' => $className,
+            'methodName' => $methodName,
+            'propertyName' => $propertyName !== null ? ltrim($propertyName, '$') : null,
+            'functionName' => $functionName,
+            'parameterName' => $parameterName !== null ? ltrim($parameterName, '$') : null,
+            'expectedType' => $expectedType,
+            'inferredType' => $inferredType,
+            'typeOrigin' => $typeOrigin,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     * @param list<string> $aliases
+     */
+    private function findMetadataString(array $metadata, array $aliases): ?string
+    {
+        foreach ($metadata as $key => $value) {
+            if (is_string($key) && in_array($key, $aliases, true) && is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+
+            if (is_array($value)) {
+                $nested = $this->findMetadataString($value, $aliases);
+                if ($nested !== null) {
+                    return $nested;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -352,6 +434,13 @@ final readonly class IssueNormalizer
     {
         $kind = strtolower(($ruleIdentifier ?? '') . ' ' . $message);
 
+        if ($this->isGenericTemplateMismatch($message, $ruleIdentifier)) {
+            return new FixHint(
+                rootCauseSummary: 'Generic or template arguments drifted from the declared contract.',
+                repairStrategySummary: 'Align template arguments at the source or tighten the declaration that introduced the mismatch.',
+            );
+        }
+
         if (str_contains($kind, 'null')) {
             return new FixHint(
                 rootCauseSummary: 'Nullable value reaches a non-null expectation.',
@@ -462,6 +551,36 @@ final readonly class IssueNormalizer
         $value = $object->{$method}();
 
         return is_int($value) ? $value : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getArray(object $object, string $method): array
+    {
+        if (!method_exists($object, $method)) {
+            return [];
+        }
+
+        $value = $object->{$method}();
+
+        return is_array($value) ? $value : [];
+    }
+
+    private function isGenericTemplateMismatch(string $message, ?string $ruleIdentifier): bool
+    {
+        $haystack = strtolower(($ruleIdentifier ?? '') . ' ' . $message);
+
+        if (str_contains($haystack, 'template')) {
+            return true;
+        }
+
+        if (!str_contains($haystack, 'given') && !str_contains($haystack, 'returns')) {
+            return false;
+        }
+
+        return preg_match('/[A-Za-z_\\\\]+\s*<.+>/', $message) === 1
+            || preg_match('/array<.+>/', $message) === 1;
     }
 
 }

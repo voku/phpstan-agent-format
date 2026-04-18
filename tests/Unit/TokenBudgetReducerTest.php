@@ -13,6 +13,7 @@ use Voku\PhpstanAgentFormat\Dto\FileLocation;
 use Voku\PhpstanAgentFormat\Dto\FixHint;
 use Voku\PhpstanAgentFormat\Dto\IssueCluster;
 use Voku\PhpstanAgentFormat\Dto\PresentationResult;
+use Voku\PhpstanAgentFormat\Dto\SchemaInfo;
 use Voku\PhpstanAgentFormat\Dto\SymbolContext;
 use Voku\PhpstanAgentFormat\Dto\TokenStats;
 use Voku\PhpstanAgentFormat\Tests\Support\TestCase;
@@ -34,7 +35,7 @@ final class TokenBudgetReducerTest
         );
 
         $cluster = new IssueCluster('c1', 'nullable-propagation', 'nullable.mismatch', 'root', 'fix', 0.9, ['/tmp/a.php'], [$issue], 0);
-        $presentation = new PresentationResult('tool', '0.1.0', '2.1.x', 1, 0, [$cluster], new TokenStats(0, 1, false));
+        $presentation = new PresentationResult('tool', '2.0.0', new SchemaInfo('tool', '2.0.0'), '2.1.x', 1, 0, [$cluster], new TokenStats(0, 1, false));
 
         $reducer = new TokenBudgetReducer(AgentFormatConfig::fromParameters(['tokenBudget' => 1]));
         $reduced = $reducer->reduce($presentation);

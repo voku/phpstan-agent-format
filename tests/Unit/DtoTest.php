@@ -25,7 +25,7 @@ final class DtoTest
             location: $location,
             symbolContext: new SymbolContext('Foo', 'Foo::bar', null, null, null, null, 'Foo', 'source'),
             snippet: new CodeSnippet(10, 12, ['line1', 'line2', 'line3']),
-            contextTrace: new ContextTrace([new TraceHop($location, 'summary', 'Foo::bar', 'method.undefined')]),
+            contextTrace: new ContextTrace([new TraceHop('primary', $location, 'summary', 'Foo::bar', 'method.undefined')]),
             fixHint: new FixHint('root', 'repair'),
         );
 
@@ -34,6 +34,9 @@ final class DtoTest
         TestCase::assertSame('i1', $array['id'], 'Issue id should be stable.');
         TestCase::assertHasKey('contextTrace', $array, 'Issue must include context trace.');
         TestCase::assertSame('root', $array['rootCauseSummary'], 'Issue root cause should be preserved.');
+        /** @var array{hops:list<array{kind:string}>} $contextTrace */
+        $contextTrace = $array['contextTrace'];
+        TestCase::assertSame('primary', $contextTrace['hops'][0]['kind'], 'Trace hops should expose stable hop kinds.');
         /** @var array<string, mixed> $symbolContext */
         $symbolContext = $array['symbolContext'];
         TestCase::assertHasKey('expectedType', $symbolContext, 'Issue should expose structured symbol repair hints.');
