@@ -44,7 +44,7 @@ final class PhpstanJsonExportIngestor
                     $line = isset($message['line']) && is_int($message['line']) ? $message['line'] : 1;
                     $identifier = isset($message['identifier']) && is_string($message['identifier']) && $message['identifier'] !== '' ? $message['identifier'] : null;
                     $tip = isset($message['tip']) && is_string($message['tip']) && $message['tip'] !== '' ? $message['tip'] : null;
-                    $metadata = isset($message['metadata']) && is_array($message['metadata']) ? $message['metadata'] : [];
+                    $metadata = isset($message['metadata']) && is_array($message['metadata']) ? $this->normalizeMetadata($message['metadata']) : [];
                     $nodeLine = isset($message['nodeLine']) && is_int($message['nodeLine']) ? $message['nodeLine'] : null;
                     $nodeType = isset($message['nodeType']) && is_string($message['nodeType']) && $message['nodeType'] !== '' ? $message['nodeType'] : null;
                     $traitFilePath = isset($message['traitFilePath']) && is_string($message['traitFilePath']) && $message['traitFilePath'] !== '' ? $message['traitFilePath'] : null;
@@ -78,5 +78,29 @@ final class PhpstanJsonExportIngestor
             'fileSpecificErrors' => $fileSpecificErrors,
             'notFileSpecificErrors' => $notFileSpecificErrors,
         ];
+    }
+
+    /**
+     * @param array<mixed> $metadata
+     * @return array<string, mixed>
+     */
+    private function normalizeMetadata(array $metadata): array
+    {
+        $normalized = [];
+
+        foreach ($metadata as $key => $value) {
+            if (!is_string($key) || $key === '') {
+                continue;
+            }
+
+            if (is_array($value)) {
+                $normalized[$key] = $this->normalizeMetadata($value);
+                continue;
+            }
+
+            $normalized[$key] = $value;
+        }
+
+        return $normalized;
     }
 }
