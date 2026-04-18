@@ -11,9 +11,20 @@ use Voku\PhpstanAgentFormat\Dto\AgentIssue;
 use Voku\PhpstanAgentFormat\Dto\FileLocation;
 use Voku\PhpstanAgentFormat\Dto\FixHint;
 use Voku\PhpstanAgentFormat\Dto\SymbolContext;
+use Voku\PhpstanAgentFormat\Support\PhpstanTipHints;
 
 final readonly class IssueNormalizer
 {
+    /**
+     * @var array<string, 1|2>
+     */
+    private const INFERRED_TYPE_PATTERNS = [
+        '/expects parameter .*?(?:to be\s+)?(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
+        '/expects\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
+        '/does not accept(?: default value of type| value of type)?\s+(.+?)(?:\.|$)/i' => 1,
+        '/with type\s+(.+?)\s+is not subtype of(?: native)? type\s+.+?(?:\.|$)/i' => 1,
+    ];
+
     public function __construct(
         private ContextExtractor $contextExtractor,
         private ContextTraceBuilder $traceBuilder,
@@ -29,13 +40,20 @@ final readonly class IssueNormalizer
 
         foreach ($analysisResult->getFileSpecificErrors() as $index => $error) {
             $file = $this->getString($error, 'getFile', 'unknown.php');
+            $filePath = $this->getNullableString($error, 'getFilePath') ?? $file;
+            $traitFilePath = $this->getNullableString($error, 'getTraitFilePath');
             $line = max(1, $this->getInt($error, 'getLine', 1));
+            $nodeLine = $this->getNullableInt($error, 'getNodeLine');
+            $nodeType = $this->getNullableString($error, 'getNodeType');
             $message = $this->getString($error, 'getMessage', 'Unknown PHPStan error.');
             $ruleIdentifier = $this->getNullableString($error, 'getIdentifier');
+            $tip = $this->getNullableString($error, 'getTip');
 
-            $location = new FileLocation($file, $line);
-            $symbolContext = $this->extractSymbolContext($message, $ruleIdentifier);
-            $snippet = $this->contextExtractor->extractSnippet($file, $line);
+            $location = new FileLocation($filePath, $line);
+            $nodeLocation = $nodeLine !== null && $nodeLine !== $line ? new FileLocation($filePath, $this->normalizeLineNumber($nodeLine)) : null;
+            $traitLocation = $traitFilePath !== null && $nodeLine !== null ? new FileLocation($traitFilePath, $this->normalizeLineNumber($nodeLine)) : null;
+            $symbolContext = $this->extractSymbolContext($message, $ruleIdentifier, $tip);
+            $snippet = $this->contextExtractor->extractSnippet($filePath, $line);
             $fixHint = $this->createFixHint($message, $ruleIdentifier);
 
             $issues[] = new AgentIssue(
@@ -45,8 +63,9 @@ final readonly class IssueNormalizer
                 location: $location,
                 symbolContext: $symbolContext,
                 snippet: $snippet,
-                contextTrace: $this->traceBuilder->build($location, $symbolContext, $ruleIdentifier, $message),
+                contextTrace: $this->traceBuilder->build($location, $symbolContext, $ruleIdentifier, $message, $nodeLocation, $nodeType, $traitLocation, $tip),
                 fixHint: $fixHint,
+                secondaryLocations: $this->extractSecondaryLocations($location, $nodeLocation, $traitLocation),
             );
         }
 
@@ -73,7 +92,7 @@ final readonly class IssueNormalizer
         return $issues;
     }
 
-    private function extractSymbolContext(string $message, ?string $ruleIdentifier): SymbolContext
+    private function extractSymbolContext(string $message, ?string $ruleIdentifier, ?string $tip = null): SymbolContext
     {
         $class = null;
         $method = null;
@@ -93,19 +112,52 @@ final readonly class IssueNormalizer
             $function = $match[1];
         }
 
-        $inferredType = null;
-        if (preg_match('/(?:expects|expects parameter .*?)\s+([\\\\\w|<>\[\]{}:?]+)/i', $message, $match) === 1) {
-            $inferredType = $match[1];
-        }
-
         return new SymbolContext(
             className: $class,
             methodName: $method,
             propertyName: $property,
             functionName: $function,
-            inferredType: $inferredType,
-            typeOrigin: $ruleIdentifier,
+            inferredType: $this->extractInferredType($message),
+            typeOrigin: $this->extractTypeOrigin($ruleIdentifier, $tip),
         );
+    }
+
+    private function extractInferredType(string $message): ?string
+    {
+        foreach (self::INFERRED_TYPE_PATTERNS as $pattern => $index) {
+            if (preg_match($pattern, $message, $match) !== 1) {
+                continue;
+            }
+
+            if (!isset($match[$index])) {
+                continue;
+            }
+
+            $type = trim($match[$index]);
+            if ($type !== '') {
+                return $type;
+            }
+        }
+
+        return null;
+    }
+
+    private function extractTypeOrigin(?string $ruleIdentifier, ?string $tip): ?string
+    {
+        if ($tip === null) {
+            return $ruleIdentifier;
+        }
+
+        $normalizedTip = strtolower(PhpstanTipHints::stripFormatting($tip));
+        if (str_contains($normalizedTip, PhpstanTipHints::PHPDOC_TYPE_ORIGIN_FRAGMENT)) {
+            return 'phpdoc';
+        }
+
+        if (str_contains($normalizedTip, 'remembering and forgetting returned values')) {
+            return 'returned-value';
+        }
+
+        return $ruleIdentifier;
     }
 
     private function createFixHint(string $message, ?string $ruleIdentifier): FixHint
@@ -144,6 +196,36 @@ final readonly class IssueNormalizer
         return sha1($file . '|' . $line . '|' . $message . '|' . $index);
     }
 
+    private function normalizeLineNumber(int $line): int
+    {
+        return max(1, $line);
+    }
+
+    /**
+     * @return list<FileLocation>
+     */
+    private function extractSecondaryLocations(FileLocation $primaryLocation, ?FileLocation ...$candidates): array
+    {
+        $secondaryLocations = [];
+        $seen = [$primaryLocation->file . ':' . $primaryLocation->line => true];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate === null) {
+                continue;
+            }
+
+            $key = $candidate->file . ':' . $candidate->line;
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $secondaryLocations[] = $candidate;
+            $seen[$key] = true;
+        }
+
+        return $secondaryLocations;
+    }
+
     private function getString(object $object, string $method, string $default): string
     {
         if (!method_exists($object, $method)) {
@@ -157,13 +239,7 @@ final readonly class IssueNormalizer
 
     private function getInt(object $object, string $method, int $default): int
     {
-        if (!method_exists($object, $method)) {
-            return $default;
-        }
-
-        $value = $object->{$method}();
-
-        return is_int($value) ? $value : $default;
+        return $this->getNullableInt($object, $method) ?? $default;
     }
 
     private function getNullableString(object $object, string $method): ?string
@@ -176,4 +252,16 @@ final readonly class IssueNormalizer
 
         return is_string($value) && $value !== '' ? $value : null;
     }
+
+    private function getNullableInt(object $object, string $method): ?int
+    {
+        if (!method_exists($object, $method)) {
+            return null;
+        }
+
+        $value = $object->{$method}();
+
+        return is_int($value) ? $value : null;
+    }
+
 }

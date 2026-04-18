@@ -10,6 +10,20 @@ use Voku\PhpstanAgentFormat\Dto\IssueCluster;
 
 final readonly class IssueClusterer
 {
+    /**
+     * PHPStan identifier families that are stable enough to use as clustering buckets
+     * before falling back to exact identifiers or message heuristics.
+     *
+     * @var array<string, string>
+     */
+    private const IDENTIFIER_FAMILY_GROUPS = [
+        'missingType' => 'missingType',
+        'ignore' => 'ignore',
+        'nullableType' => 'nullableType',
+        'nullCoalesce' => 'nullCoalesce',
+        'nullsafe' => 'nullsafe',
+    ];
+
     public function __construct(private AgentFormatConfig $config)
     {
     }
@@ -26,13 +40,14 @@ final readonly class IssueClusterer
             $kind = $this->detectKind($issue);
             $symbol = $issue->symbolContext->methodName ?? $issue->symbolContext->propertyName ?? $issue->symbolContext->className ?? '_none';
             $lineBucket = (int) floor($issue->location->line / 10);
+            $groupingIdentifier = $this->groupingIdentifier($issue->ruleIdentifier, $kind);
             $key = implode('|', [
                 $kind,
-                $issue->ruleIdentifier ?? '_rule',
+                $groupingIdentifier,
                 $symbol,
                 $issue->location->file,
                 (string) $lineBucket,
-                $issue->symbolContext->typeOrigin ?? '_origin',
+                $this->groupingTypeOrigin($issue->symbolContext->typeOrigin),
             ]);
 
             $groups[$key][] = $issue;
@@ -72,6 +87,11 @@ final readonly class IssueClusterer
 
     private function detectKind(AgentIssue $issue): string
     {
+        $identifierKind = $this->kindFromIdentifier($issue->ruleIdentifier);
+        if ($identifierKind !== null) {
+            return $identifierKind;
+        }
+
         $haystack = strtolower(($issue->ruleIdentifier ?? '') . ' ' . $issue->message);
 
         return match (true) {
@@ -82,5 +102,48 @@ final readonly class IssueClusterer
             str_contains($haystack, 'ignore') || str_contains($haystack, 'baseline') => 'stale-ignore-noise',
             default => 'same-rule-same-symbol',
         };
+    }
+
+    private function groupingIdentifier(?string $ruleIdentifier, string $kind): string
+    {
+        $identifierGroup = $this->identifierGroup($ruleIdentifier);
+
+        if ($identifierGroup !== null && isset(self::IDENTIFIER_FAMILY_GROUPS[$identifierGroup])) {
+            return self::IDENTIFIER_FAMILY_GROUPS[$identifierGroup];
+        }
+
+        return $ruleIdentifier ?? '_rule';
+    }
+
+    private function kindFromIdentifier(?string $ruleIdentifier): ?string
+    {
+        return match ($this->identifierGroup($ruleIdentifier)) {
+            'missingType' => 'missing-type-declaration',
+            'ignore' => 'stale-ignore-noise',
+            'nullableType', 'nullCoalesce', 'nullsafe' => 'nullable-propagation',
+            default => null,
+        };
+    }
+
+    private function identifierGroup(?string $ruleIdentifier): ?string
+    {
+        if ($ruleIdentifier === null || $ruleIdentifier === '') {
+            return null;
+        }
+
+        $parts = explode('.', $ruleIdentifier, 2);
+
+        return $parts[0] !== '' ? $parts[0] : null;
+    }
+
+    private function groupingTypeOrigin(?string $typeOrigin): string
+    {
+        $group = $this->identifierGroup($typeOrigin);
+
+        if ($group !== null && isset(self::IDENTIFIER_FAMILY_GROUPS[$group])) {
+            return self::IDENTIFIER_FAMILY_GROUPS[$group];
+        }
+
+        return $typeOrigin ?? '_origin';
     }
 }

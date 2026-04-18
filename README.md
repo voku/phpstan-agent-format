@@ -93,7 +93,7 @@ Accepted aliases for `outputMode`: `json`, `ndjson`, `markdown`, `compact`.
 
 First-pass clustering groups by:
 
-- same rule identifier
+- same PHPStan error-identifier family when available, otherwise same rule identifier
 - same symbol context when detected
 - same file + nearby line bucket
 - same type-origin hint

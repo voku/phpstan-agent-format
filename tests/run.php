@@ -38,6 +38,7 @@ spl_autoload_register(static function (string $class) use ($root): void {
 $tests = [
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\DtoTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\ClustererTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\IssueNormalizerTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\TokenBudgetReducerTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\SerializerTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\FormatterIntegrationTest', 'run'],
