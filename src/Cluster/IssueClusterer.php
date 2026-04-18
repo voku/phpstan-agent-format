@@ -108,7 +108,7 @@ final readonly class IssueClusterer
     {
         $identifierGroup = $this->identifierGroup($ruleIdentifier);
 
-        return self::IDENTIFIER_FAMILY_GROUPS[$identifierGroup] ?? $ruleIdentifier ?? $kind;
+        return self::IDENTIFIER_FAMILY_GROUPS[$identifierGroup] ?? $ruleIdentifier ?? '_rule';
     }
 
     private function kindFromIdentifier(?string $ruleIdentifier): ?string
