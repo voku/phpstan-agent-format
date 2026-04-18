@@ -6,6 +6,7 @@ namespace Voku\PhpstanAgentFormat\Tests\Unit;
 
 use Voku\PhpstanAgentFormat\Dto\IssueCluster;
 use Voku\PhpstanAgentFormat\Dto\PresentationResult;
+use Voku\PhpstanAgentFormat\Dto\SchemaInfo;
 use Voku\PhpstanAgentFormat\Dto\TokenStats;
 use Voku\PhpstanAgentFormat\Serializer\CompactTextAgentSerializer;
 use Voku\PhpstanAgentFormat\Serializer\JsonAgentSerializer;
@@ -18,11 +19,12 @@ final class SerializerTest
     public static function run(): void
     {
         $cluster = new IssueCluster('c1', 'same-rule-same-symbol', 'rule', 'root', 'repair', 1.0, ['/tmp/a.php'], [], 2);
-        $presentation = new PresentationResult('phpstan-agent-format', '0.1.0', '2.1.x', 2, 2, [$cluster], new TokenStats(5, 100, false));
+        $presentation = new PresentationResult('phpstan-agent-format', '2.0.0', new SchemaInfo('phpstan-agent-format', '2.0.0'), '2.1.x', 2, 2, [$cluster], new TokenStats(5, 100, false));
 
         $json1 = (new JsonAgentSerializer())->serialize($presentation);
         $json2 = (new JsonAgentSerializer())->serialize($presentation);
         TestCase::assertSame($json1, $json2, 'JSON serializer output should be deterministic.');
+        TestCase::assertTrue(str_contains($json1, '"schema"'), 'JSON serializer should expose the schema descriptor.');
 
         $ndjson = (new NdjsonAgentSerializer())->serialize($presentation);
         TestCase::assertTrue(str_contains($ndjson, '"cluster"'), 'NDJSON should include cluster line.');

@@ -39,7 +39,7 @@ final readonly class IssueCluster
      *         location: array{file: string, line: int},
      *         symbolContext: array{className: ?string, methodName: ?string, propertyName: ?string, functionName: ?string, parameterName: ?string, expectedType: ?string, inferredType: ?string, typeOrigin: ?string},
      *         snippet: array{startLine: int, highlightLine: int, lines: list<string>},
-     *         contextTrace: array{hops: list<array{location: array{file: string, line: int}, summary: string, symbol: ?string, ruleIdentifier: ?string}>},
+     *         contextTrace: array{hops: list<array{kind:string,location: array{file: string, line: int}, summary: string, symbol: ?string, ruleIdentifier: ?string}>},
      *         rootCauseSummary: string,
      *         repairStrategySummary: string,
      *         secondaryLocations: list<array{file: string, line: int}>

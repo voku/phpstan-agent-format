@@ -43,6 +43,32 @@ final class ClustererTest
         $offsetAccess = self::issue('f', 24, "Offset 'foo' does not exist on string.", 'offsetAccess.notFound', 'offsetAccess.notFound');
         $offsetClusters = $clusterer->cluster([$offsetAccess]);
         TestCase::assertSame('invalid-offset-access', $offsetClusters[0]->kind, 'Offset-access errors should get a dedicated cluster kind.');
+
+        $genericMismatch = new AgentIssue(
+            id: 'g',
+            message: 'Function genericReturnFixture() should return array<int, string> but returns array<string, int>.',
+            ruleIdentifier: 'return.type',
+            location: new FileLocation('/tmp/a.php', 30),
+            symbolContext: new SymbolContext(null, null, null, 'genericReturnFixture', null, 'array<int, string>', 'array<string, int>', 'return.type'),
+            snippet: new CodeSnippet(30, 30, ['return [\'x\' => 1];']),
+            contextTrace: new ContextTrace([]),
+            fixHint: new FixHint('generic drift', 'align templates'),
+        );
+        $genericClusters = $clusterer->cluster([$genericMismatch]);
+        TestCase::assertSame('generic-template-drift', $genericClusters[0]->kind, 'Generic argument drift should get a dedicated cluster kind.');
+
+        $digitGenericMismatch = new AgentIssue(
+            id: 'h',
+            message: 'Function genericReturnFixture() should return Model1<int, string> but returns Model2<string, int>.',
+            ruleIdentifier: 'return.type',
+            location: new FileLocation('/tmp/a.php', 31),
+            symbolContext: new SymbolContext(null, null, null, 'genericReturnFixture', null, 'Model1<int, string>', 'Model2<string, int>', 'return.type'),
+            snippet: new CodeSnippet(31, 31, ['return [\'x\' => 1];']),
+            contextTrace: new ContextTrace([]),
+            fixHint: new FixHint('generic drift', 'align templates'),
+        );
+        $digitGenericClusters = $clusterer->cluster([$digitGenericMismatch]);
+        TestCase::assertSame('generic-template-drift', $digitGenericClusters[0]->kind, 'Generic drift detection should allow digits in type identifiers.');
     }
 
     private static function issue(

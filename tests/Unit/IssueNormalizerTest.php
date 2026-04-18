@@ -113,6 +113,31 @@ final class IssueNormalizerTest
                 return 'argument.type';
             }
         };
+        $digitGenericParameterTypeError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 9;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Parameter #1 $items of function genericParameterFixture expects Model1<int, string>, Model2<string, int> given.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'argument.type';
+            }
+        };
         $nonObjectMethodError = new class ($fixtureFile) {
             public function __construct(private readonly string $file)
             {
@@ -296,6 +321,7 @@ final class IssueNormalizerTest
         TestCase::assertSame(1, count($issue->secondaryLocations), 'Node origin should be promoted to a secondary location.');
         TestCase::assertSame(7, $issue->secondaryLocations[0]->line, 'Node line should be preserved for deeper tracing.');
         TestCase::assertTrue(count($issue->snippet->lines) > 0, 'Snippet extraction should use the actionable file path.');
+        TestCase::assertSame('primary', $issue->contextTrace->hops[0]->kind, 'Context hops should expose stable kinds.');
 
         $summaries = array_map(static fn ($hop): string => $hop->summary, $issue->contextTrace->hops);
         $hasNodeContext = false;
@@ -318,6 +344,20 @@ final class IssueNormalizerTest
         TestCase::assertSame('genericParameterFixture', $genericParameterIssues[0]->symbolContext->functionName, 'Generic parameter messages should preserve the function name.');
         TestCase::assertSame('array<int, string>', $genericParameterIssues[0]->symbolContext->expectedType, 'Generic parameter messages should preserve expected types with nested commas.');
         TestCase::assertSame('array<string, int>', $genericParameterIssues[0]->symbolContext->inferredType, 'Generic parameter messages should preserve inferred types with nested commas.');
+        TestCase::assertSame(
+            'Generic or template arguments drifted from the declared contract.',
+            $genericParameterIssues[0]->fixHint->rootCauseSummary,
+            'Generic parameter messages should get the dedicated generic mismatch fix hint.'
+        );
+
+        $digitGenericParameterIssues = $normalizer->normalize(new AnalysisResult([$digitGenericParameterTypeError], []));
+        TestCase::assertSame('Model1<int, string>', $digitGenericParameterIssues[0]->symbolContext->expectedType, 'Generic detection should preserve expected types containing digits.');
+        TestCase::assertSame('Model2<string, int>', $digitGenericParameterIssues[0]->symbolContext->inferredType, 'Generic detection should preserve inferred types containing digits.');
+        TestCase::assertSame(
+            'Generic or template arguments drifted from the declared contract.',
+            $digitGenericParameterIssues[0]->fixHint->rootCauseSummary,
+            'Generic mismatch fix hints should still apply when type identifiers contain digits.'
+        );
 
         $nonObjectIssues = $normalizer->normalize(new AnalysisResult([$nonObjectMethodError], []));
         TestCase::assertSame('trim', $nonObjectIssues[0]->symbolContext->methodName, 'Non-object method access should expose the accessed member name.');
@@ -339,6 +379,109 @@ final class IssueNormalizerTest
         $offsetAccessIssues = $normalizer->normalize(new AnalysisResult([$offsetAccessError], []));
         TestCase::assertSame('string', $offsetAccessIssues[0]->symbolContext->inferredType, 'Offset-access messages should expose the container type.');
         TestCase::assertSame('The inferred container type does not define the accessed offset.', $offsetAccessIssues[0]->fixHint->rootCauseSummary, 'Offset-access issues should provide a dedicated fix hint.');
+
+        $metadataRichError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 9;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Generic mismatch.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'argument.type';
+            }
+
+            /**
+             * @return array<string, mixed>
+             */
+            public function getMetadata(): array
+            {
+                return [
+                    'symbol' => [
+                        'className' => 'MetadataDemo',
+                        'methodName' => 'repair',
+                        'parameterName' => '$payload',
+                    ],
+                    'types' => [
+                        'expectedType' => 'array<int, string>',
+                        'inferredType' => 'array<string, int>',
+                    ],
+                    'origin' => [
+                        'typeOrigin' => 'metadata',
+                    ],
+                ];
+            }
+        };
+
+        $metadataIssues = $normalizer->normalize(new AnalysisResult([$metadataRichError], []));
+        TestCase::assertSame('MetadataDemo::repair', $metadataIssues[0]->symbolContext->methodName, 'Metadata-backed method names should be preferred over message heuristics.');
+        TestCase::assertSame('payload', $metadataIssues[0]->symbolContext->parameterName, 'Metadata-backed parameter names should be normalized.');
+        TestCase::assertSame('array<int, string>', $metadataIssues[0]->symbolContext->expectedType, 'Metadata-backed expected types should be preserved.');
+        TestCase::assertSame('array<string, int>', $metadataIssues[0]->symbolContext->inferredType, 'Metadata-backed inferred types should be preserved.');
+        TestCase::assertSame('metadata', $metadataIssues[0]->symbolContext->typeOrigin, 'Metadata-backed type origins should be surfaced.');
+
+        $metadataListError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 9;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Generic mismatch in list metadata.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'argument.type';
+            }
+
+            /**
+             * @return array<string, mixed>
+             */
+            public function getMetadata(): array
+            {
+                return [
+                    'candidates' => [
+                        [
+                            'parameterName' => '$items',
+                            'expectedType' => 'array<int, string>',
+                        ],
+                        [
+                            'inferredType' => 'array<string, int>',
+                        ],
+                    ],
+                ];
+            }
+        };
+
+        $metadataListIssues = $normalizer->normalize(new AnalysisResult([$metadataListError], []));
+        TestCase::assertSame('items', $metadataListIssues[0]->symbolContext->parameterName, 'Metadata normalization should preserve nested list entries.');
+        TestCase::assertSame('array<int, string>', $metadataListIssues[0]->symbolContext->expectedType, 'List-based metadata should preserve expected types.');
+        TestCase::assertSame('array<string, int>', $metadataListIssues[0]->symbolContext->inferredType, 'List-based metadata should preserve inferred types.');
 
         $returnedValueIssues = $normalizer->normalize(new AnalysisResult([$returnedValueTipError], []));
         TestCase::assertSame('returned-value', $returnedValueIssues[0]->symbolContext->typeOrigin, 'Returned-value hints should be surfaced as a dedicated type origin.');

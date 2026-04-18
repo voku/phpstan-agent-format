@@ -1,6 +1,6 @@
 # voku/phpstan-agent-format
 
-`voku/phpstan-agent-format` adds a custom PHPStan formatter named `agent` that emits compact, deterministic repair envelopes for coding agents.
+`voku/phpstan-agent-format` adds a custom PHPStan formatter named `agent` that emits compact, deterministic v2 repair envelopes for coding agents.
 
 ## Why
 
@@ -47,6 +47,7 @@ vendor/bin/phpstan analyse --error-format=agent
 
 The repository CI dogfoods both modes by running PHPStan once with the default formatter, once with `--error-format=agent` on the library itself, and again against committed failing/clean fixture configs that exercise the agent envelope on real PHPStan fixture output.
 The bundled extension also declares the `agentFormat` config schema, so real fixture configs can pass formatter options directly through PHPStan.
+v2 also supports formatting a prior `--error-format=json` PHPStan export through `AgentErrorFormatter::formatPhpstanJsonExport()`.
 
 ## Output modes
 
@@ -64,8 +65,12 @@ Representative issues include structured repair hints inside `symbolContext`, in
 ```json
 {
   "tool": "phpstan-agent-format",
-  "version": "0.1.0",
-  "phpstanVersion": "2.1.x",
+  "version": "2.0.0",
+  "schema": {
+    "name": "phpstan-agent-format",
+    "version": "2.0.0"
+  },
+  "phpstanVersion": "2.1.50",
   "summary": {
     "totalIssues": 3,
     "clusters": 1,
@@ -92,7 +97,7 @@ Representative issues include structured repair hints inside `symbolContext`, in
 }
 ```
 
-## Clustering strategy (v1)
+## Clustering strategy (v2)
 
 First-pass clustering groups by:
 
@@ -105,6 +110,7 @@ Cluster kinds include:
 
 - nullable propagation
 - missing type declaration
+- generic/template drift
 - array shape drift
 - undefined member from inferred type
 - invalid offset access
@@ -133,14 +139,9 @@ See `/examples/`:
 - `agent-markdown-example.md`
 - `agent-compact-example.txt`
 
-## Trade-offs in v1
+## What's new in v2
 
-- Symbol extraction is heuristic from messages (fast and deterministic, not full AST context reconstruction).
-- Type origin and propagation hops are conservative and compact.
-- JSON schema is stable and versioned, designed to extend without breaking top-level keys.
-
-## Future improvements
-
-- Deeper type-origin tracing from richer PHPStan internals.
-- Optional ingestion path from PHPStan JSON export.
-- Additional cluster heuristics for generics/template source drift.
+- Symbol extraction now prefers structured PHPStan metadata when available and falls back to deterministic message heuristics.
+- Type-origin and propagation traces stay compact while exposing stable hop kinds for downstream consumers.
+- JSON output includes an explicit `schema` descriptor so the envelope can evolve without breaking the existing top-level contract.
+- PHPStan JSON exports can be reformatted through `AgentErrorFormatter::formatPhpstanJsonExport()`.

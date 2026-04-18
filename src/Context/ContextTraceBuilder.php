@@ -25,64 +25,90 @@ final class ContextTraceBuilder
         ?string $tip = null,
     ): ContextTrace
     {
-        $hops = [
-            new TraceHop(
-                location: $location,
-                summary: 'Primary static-analysis finding.',
-                symbol: $this->bestSymbol($symbolContext),
-                ruleIdentifier: $ruleIdentifier,
-            ),
-        ];
+        $hops = [];
+        $this->appendHop($hops, new TraceHop(
+            kind: 'primary',
+            location: $location,
+            summary: 'Primary static-analysis finding.',
+            symbol: $this->bestSymbol($symbolContext),
+            ruleIdentifier: $ruleIdentifier,
+        ));
 
         if ($nodeLocation !== null) {
-            $hops[] = new TraceHop(
+            $this->appendHop($hops, new TraceHop(
+                kind: 'ast-node',
                 location: $nodeLocation,
-                summary: sprintf('PHPStan attached the finding to AST node %s.', $this->describeNodeType($nodeType)),
+                summary: sprintf('Attached AST node: %s.', $this->describeNodeType($nodeType)),
                 symbol: $this->bestSymbol($symbolContext),
                 ruleIdentifier: $ruleIdentifier,
-            );
+            ));
         }
 
         if ($symbolContext->typeOrigin !== null) {
-            $hops[] = new TraceHop(
+            $this->appendHop($hops, new TraceHop(
+                kind: 'type-origin',
                 location: $location,
                 summary: $symbolContext->typeOrigin === 'phpdoc'
-                    ? 'Type origin hint: PHPDoc-enriched type.'
-                    : sprintf('Inferred type origin: %s', $symbolContext->typeOrigin),
+                    ? 'Type certainty comes from PHPDoc.'
+                    : sprintf('Type origin: %s.', $symbolContext->typeOrigin),
                 symbol: $symbolContext->inferredType,
                 ruleIdentifier: $ruleIdentifier,
-            );
+            ));
         }
 
         $tipSummary = $this->tipSummary($tip, $symbolContext->typeOrigin);
         if ($tipSummary !== null) {
-            $hops[] = new TraceHop(
+            $this->appendHop($hops, new TraceHop(
+                kind: 'phpstan-tip',
                 location: $nodeLocation ?? $location,
                 summary: $tipSummary,
                 symbol: $symbolContext->inferredType ?? $this->bestSymbol($symbolContext),
                 ruleIdentifier: $ruleIdentifier,
-            );
+            ));
         }
 
         if ($traitLocation !== null) {
-            $hops[] = new TraceHop(
+            $this->appendHop($hops, new TraceHop(
+                kind: 'trait-declaration',
                 location: $traitLocation,
-                summary: 'Related declaration is traced through an imported trait.',
+                summary: 'Related declaration comes from an imported trait.',
                 symbol: $this->bestSymbol($symbolContext),
                 ruleIdentifier: $ruleIdentifier,
-            );
+            ));
         }
 
         if (str_contains(strtolower($message), 'null')) {
-            $hops[] = new TraceHop(
+            $this->appendHop($hops, new TraceHop(
+                kind: 'nullable-propagation',
                 location: $location,
                 summary: 'Nullable value propagated into a stricter type expectation.',
                 symbol: $this->bestSymbol($symbolContext),
                 ruleIdentifier: $ruleIdentifier,
-            );
+            ));
         }
 
         return new ContextTrace($hops);
+    }
+
+    /**
+     * @param list<TraceHop> $hops
+     */
+    private function appendHop(array &$hops, TraceHop $hop): void
+    {
+        foreach ($hops as $existing) {
+            if (
+                $existing->kind === $hop->kind
+                && $existing->location->file === $hop->location->file
+                && $existing->location->line === $hop->location->line
+                && $existing->summary === $hop->summary
+                && $existing->symbol === $hop->symbol
+                && $existing->ruleIdentifier === $hop->ruleIdentifier
+            ) {
+                return;
+            }
+        }
+
+        $hops[] = $hop;
     }
 
     private function bestSymbol(SymbolContext $symbolContext): ?string

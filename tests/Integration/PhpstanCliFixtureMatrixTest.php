@@ -85,6 +85,7 @@ final class PhpstanCliFixtureMatrixTest
             $genericParameterIssue = $issuesByMessage['Parameter #1 $items of function genericParameterFixture expects array<int, string>, array<string, int> given.'] ?? null;
             TestCase::assertTrue(is_array($genericParameterIssue), 'Generic-parameter fixture should be present.');
             /** @var array{message: string, symbolContext: array{methodName: ?string, functionName: ?string, expectedType: ?string, inferredType: ?string, parameterName?: ?string}, rootCauseSummary: string} $genericParameterIssue */
+            TestCase::assertSame('generic-template-drift', $kindsByMessage[$genericParameterIssue['message']], 'Generic parameter mismatches should use the dedicated generic drift cluster.');
             TestCase::assertSame('genericParameterFixture', $genericParameterIssue['symbolContext']['functionName'], 'Generic parameter mismatches should preserve function names.');
             TestCase::assertSame('array<int, string>', $genericParameterIssue['symbolContext']['expectedType'], 'Generic parameter mismatches should preserve expected types with inner commas.');
             TestCase::assertSame('array<string, int>', $genericParameterIssue['symbolContext']['inferredType'], 'Generic parameter mismatches should preserve inferred types with inner commas.');

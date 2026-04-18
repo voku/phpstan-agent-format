@@ -13,8 +13,6 @@ use Voku\PhpstanAgentFormat\Config\AgentFormatConfig;
 use Voku\PhpstanAgentFormat\Contract\AgentSerializerInterface;
 use Voku\PhpstanAgentFormat\Context\ContextExtractor;
 use Voku\PhpstanAgentFormat\Context\ContextTraceBuilder;
-use Voku\PhpstanAgentFormat\Dto\PresentationResult;
-use Voku\PhpstanAgentFormat\Dto\TokenStats;
 use Voku\PhpstanAgentFormat\Normalizer\IssueNormalizer;
 use Voku\PhpstanAgentFormat\Serializer\CompactTextAgentSerializer;
 use Voku\PhpstanAgentFormat\Serializer\JsonAgentSerializer;
@@ -24,9 +22,7 @@ use Voku\PhpstanAgentFormat\Serializer\NdjsonAgentSerializer;
 final class AgentErrorFormatter implements ErrorFormatter
 {
     private readonly AgentFormatConfig $config;
-    private readonly IssueNormalizer $issueNormalizer;
-    private readonly IssueClusterer $issueClusterer;
-    private readonly TokenBudgetReducer $tokenBudgetReducer;
+    private readonly AgentPresentationBuilder $presentationBuilder;
 
     /**
      * @param array<string, mixed> $parameters
@@ -39,37 +35,31 @@ final class AgentErrorFormatter implements ErrorFormatter
         ?AgentFormatConfig $config = null,
     ) {
         $this->config = $config ?? AgentFormatConfig::fromParameters($parameters);
-        $this->issueNormalizer = $issueNormalizer ?? new IssueNormalizer(new ContextExtractor($this->config), new ContextTraceBuilder());
-        $this->issueClusterer = $issueClusterer ?? new IssueClusterer($this->config);
-        $this->tokenBudgetReducer = $tokenBudgetReducer ?? new TokenBudgetReducer($this->config);
+        $this->presentationBuilder = new AgentPresentationBuilder(
+            $this->config,
+            $issueNormalizer ?? new IssueNormalizer(new ContextExtractor($this->config), new ContextTraceBuilder()),
+            $issueClusterer ?? new IssueClusterer($this->config),
+            $tokenBudgetReducer ?? new TokenBudgetReducer($this->config),
+        );
     }
 
     public function formatErrors(AnalysisResult $analysisResult, Output $output): int
     {
-        $issues = $this->issueNormalizer->normalize($analysisResult);
-        $clusters = $this->issueClusterer->cluster($issues);
-
-        $suppressedDuplicates = 0;
-        foreach ($clusters as $cluster) {
-            $suppressedDuplicates += $cluster->suppressedDuplicateCount;
-        }
-
-        $presentation = new PresentationResult(
-            tool: 'phpstan-agent-format',
-            version: '0.1.0',
-            phpstanVersion: '2.1.x',
-            totalIssues: count($issues),
-            suppressedDuplicates: $suppressedDuplicates,
-            clusters: $clusters,
-            tokenStats: new TokenStats(0, $this->config->tokenBudget, false),
-        );
-
-        $reduced = $this->tokenBudgetReducer->reduce($presentation);
-        $serialized = $this->serializerForMode($this->config->outputMode)->serialize($reduced);
+        $serialized = $this->serializerForMode($this->config->outputMode)
+            ->serialize($this->presentationBuilder->buildFromAnalysisResult($analysisResult));
 
         $output->writeRaw($serialized);
 
         return $analysisResult->hasErrors() ? 1 : 0;
+    }
+
+    /**
+     * @param array<string, mixed>|string $payload
+     */
+    public function formatPhpstanJsonExport(array|string $payload): string
+    {
+        return $this->serializerForMode($this->config->outputMode)
+            ->serialize($this->presentationBuilder->buildFromPhpstanJsonExport($payload));
     }
 
     private function serializerForMode(string $mode): AgentSerializerInterface
