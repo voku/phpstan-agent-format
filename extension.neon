@@ -5,3 +5,16 @@ services:
             parameters: %parameters%
         tags:
             - phpstan.errorFormatter
+
+parametersSchema:
+    agentFormat: structure([
+        outputMode: string()
+        maxClusters: int()
+        maxIssuesPerCluster: int()
+        snippetLinesBefore: int()
+        snippetLinesAfter: int()
+        includeDocblock: bool()
+        includeRelatedDefinition: bool()
+        tokenBudget: int()
+        redactPatterns: listOf(string())
+    ])

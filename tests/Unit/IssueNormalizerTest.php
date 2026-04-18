@@ -98,6 +98,8 @@ final class IssueNormalizerTest
         $issue = $issues[0];
 
         TestCase::assertSame($fixtureFile, $issue->location->file, 'File path should prefer PHPStan filePath when available.');
+        TestCase::assertSame('string', $issue->symbolContext->expectedType, 'Expected type should be extracted from PHPStan messages.');
+        TestCase::assertSame('string', $issue->symbolContext->parameterName, 'Parameter names should be extracted from PHPStan messages.');
         TestCase::assertSame('string|null', $issue->symbolContext->inferredType, 'Given type should be extracted from PHPStan messages.');
         TestCase::assertSame('phpdoc', $issue->symbolContext->typeOrigin, 'PHPDoc type origin should be detected from PHPStan tips.');
         TestCase::assertSame(1, count($issue->secondaryLocations), 'Node origin should be promoted to a secondary location.');
@@ -116,6 +118,8 @@ final class IssueNormalizerTest
         TestCase::assertTrue($hasPhpDocHint, 'Context trace should include the PHPStan type-origin hint.');
 
         $parameterIssues = $normalizer->normalize(new AnalysisResult([$methodParameterTypeError], []));
+        TestCase::assertSame('value', $parameterIssues[0]->symbolContext->parameterName, 'Method parameter names should be exposed for repair suggestions.');
+        TestCase::assertSame('string', $parameterIssues[0]->symbolContext->expectedType, 'Method parameter messages should expose the expected type.');
         TestCase::assertSame('int', $parameterIssues[0]->symbolContext->inferredType, 'Parameter-focused PHPStan messages should also expose the given type.');
     }
 }

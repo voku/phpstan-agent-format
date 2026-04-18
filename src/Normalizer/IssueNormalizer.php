@@ -25,6 +25,14 @@ final readonly class IssueNormalizer
         '/with type\s+(.+?)\s+is not subtype of(?: native)? type\s+.+?(?:\.|$)/i' => 1,
     ];
 
+    /**
+     * @var array<string, 1>
+     */
+    private const EXPECTED_TYPE_PATTERNS = [
+        '/expects parameter .*?(?:to be\s+)?(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
+        '/expects\s+(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
+    ];
+
     public function __construct(
         private ContextExtractor $contextExtractor,
         private ContextTraceBuilder $traceBuilder,
@@ -94,22 +102,14 @@ final readonly class IssueNormalizer
 
     private function extractSymbolContext(string $message, ?string $ruleIdentifier, ?string $tip = null): SymbolContext
     {
-        $class = null;
-        $method = null;
-        $property = null;
-        $function = null;
+        [$class, $property] = $this->extractPropertyContext($message);
+        $method = $this->extractMethodName($message);
+        $function = $this->extractFunctionName($message);
+        $parameter = $this->extractParameterName($message);
+        $expectedType = $this->extractExpectedType($message);
 
-        if (preg_match('/class\s+([\\\\\w]+)/i', $message, $match) === 1) {
-            $class = $match[1];
-        }
-        if (preg_match('/method\s+([\\\\\w:]+)/i', $message, $match) === 1) {
-            $method = $match[1];
-        }
-        if (preg_match('/property\s+\$?([\\\\\w]+)/i', $message, $match) === 1) {
-            $property = $match[1];
-        }
-        if (preg_match('/function\s+([\\\\\w]+)/i', $message, $match) === 1) {
-            $function = $match[1];
+        if ($class === null) {
+            $class = $this->extractClassName($message);
         }
 
         return new SymbolContext(
@@ -117,9 +117,85 @@ final readonly class IssueNormalizer
             methodName: $method,
             propertyName: $property,
             functionName: $function,
+            parameterName: $parameter,
+            expectedType: $expectedType,
             inferredType: $this->extractInferredType($message),
             typeOrigin: $this->extractTypeOrigin($ruleIdentifier, $tip),
         );
+    }
+
+    /**
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function extractPropertyContext(string $message): array
+    {
+        if (preg_match('/property\s+([\\\\\w]+)::\$([A-Za-z_][A-Za-z0-9_]*)/i', $message, $match) === 1) {
+            return [$match[1], $match[2]];
+        }
+
+        return [null, null];
+    }
+
+    private function extractClassName(string $message): ?string
+    {
+        if (preg_match('/(?:class|trait)\s+([\\\\\w]+)/i', $message, $match) === 1) {
+            return $match[1];
+        }
+
+        if (preg_match('/(?:method|property)\s+([\\\\\w]+)::/i', $message, $match) === 1) {
+            return $match[1];
+        }
+
+        return null;
+    }
+
+    private function extractMethodName(string $message): ?string
+    {
+        if (preg_match('/(?:static\s+)?method\s+([\\\\\w]+::[A-Za-z_][A-Za-z0-9_]*)\(\)/i', $message, $match) === 1) {
+            return $match[1];
+        }
+
+        return null;
+    }
+
+    private function extractFunctionName(string $message): ?string
+    {
+        if (preg_match('/function\s+([\\\\\w]+)(?:\(\))?/i', $message, $match) === 1) {
+            return $match[1];
+        }
+
+        return null;
+    }
+
+    private function extractParameterName(string $message): ?string
+    {
+        foreach ([
+            '/parameter\s+#\d+\s+\$([A-Za-z_][A-Za-z0-9_]*)\b/i',
+            '/has parameter\s+\$([A-Za-z_][A-Za-z0-9_]*)\b/i',
+            '/parameter\s+\$([A-Za-z_][A-Za-z0-9_]*)\b/i',
+        ] as $pattern) {
+            if (preg_match($pattern, $message, $match) === 1) {
+                return $match[1];
+            }
+        }
+
+        return null;
+    }
+
+    private function extractExpectedType(string $message): ?string
+    {
+        foreach (self::EXPECTED_TYPE_PATTERNS as $pattern => $index) {
+            if (preg_match($pattern, $message, $match) !== 1 || !isset($match[$index])) {
+                continue;
+            }
+
+            $type = trim($match[$index]);
+            if ($type !== '') {
+                return $type;
+            }
+        }
+
+        return null;
     }
 
     private function extractInferredType(string $message): ?string

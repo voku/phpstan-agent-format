@@ -26,7 +26,7 @@ final class TokenBudgetReducerTest
             message: 'Nullable string given.',
             ruleIdentifier: 'nullable.mismatch',
             location: new FileLocation('/tmp/a.php', 20),
-            symbolContext: new SymbolContext(null, null, null, null, null, null),
+            symbolContext: new SymbolContext(null, null, null, null, null, null, null, null),
             snippet: new CodeSnippet(18, 20, ['a', 'b', 'c', 'd']),
             contextTrace: new ContextTrace([]),
             fixHint: new FixHint('nullable reaches strict type', 'guard for null'),

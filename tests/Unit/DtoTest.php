@@ -23,7 +23,7 @@ final class DtoTest
             message: 'Undefined method Foo::bar()',
             ruleIdentifier: 'method.undefined',
             location: $location,
-            symbolContext: new SymbolContext('Foo', 'Foo::bar', null, null, 'Foo', 'source'),
+            symbolContext: new SymbolContext('Foo', 'Foo::bar', null, null, null, null, 'Foo', 'source'),
             snippet: new CodeSnippet(10, 12, ['line1', 'line2', 'line3']),
             contextTrace: new ContextTrace([new TraceHop($location, 'summary', 'Foo::bar', 'method.undefined')]),
             fixHint: new FixHint('root', 'repair'),
@@ -34,5 +34,6 @@ final class DtoTest
         TestCase::assertSame('i1', $array['id'], 'Issue id should be stable.');
         TestCase::assertHasKey('contextTrace', $array, 'Issue must include context trace.');
         TestCase::assertSame('root', $array['rootCauseSummary'], 'Issue root cause should be preserved.');
+        TestCase::assertHasKey('expectedType', $array['symbolContext'], 'Issue should expose structured symbol repair hints.');
     }
 }

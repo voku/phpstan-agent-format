@@ -42,6 +42,7 @@ $tests = [
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\TokenBudgetReducerTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\SerializerTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\FormatterIntegrationTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliIntegrationTest', 'run'],
 ];
 
 $failures = [];

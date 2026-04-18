@@ -11,13 +11,24 @@ final readonly class SymbolContext
         public ?string $methodName,
         public ?string $propertyName,
         public ?string $functionName,
+        public ?string $parameterName,
+        public ?string $expectedType,
         public ?string $inferredType,
         public ?string $typeOrigin,
     ) {
     }
 
     /**
-     * @return array{className:?string,methodName:?string,propertyName:?string,functionName:?string,inferredType:?string,typeOrigin:?string}
+     * @return array{
+     *     className:?string,
+     *     methodName:?string,
+     *     propertyName:?string,
+     *     functionName:?string,
+     *     parameterName:?string,
+     *     expectedType:?string,
+     *     inferredType:?string,
+     *     typeOrigin:?string
+     * }
      */
     public function toArray(): array
     {
@@ -26,6 +37,8 @@ final readonly class SymbolContext
             'methodName' => $this->methodName,
             'propertyName' => $this->propertyName,
             'functionName' => $this->functionName,
+            'parameterName' => $this->parameterName,
+            'expectedType' => $this->expectedType,
             'inferredType' => $this->inferredType,
             'typeOrigin' => $this->typeOrigin,
         ];

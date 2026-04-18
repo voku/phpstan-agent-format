@@ -50,7 +50,7 @@ final class ClustererTest
             message: $message,
             ruleIdentifier: $ruleIdentifier,
             location: new FileLocation('/tmp/a.php', $line),
-            symbolContext: new SymbolContext('Foo', 'Foo::bar', null, null, 'Foo', $typeOrigin),
+            symbolContext: new SymbolContext('Foo', 'Foo::bar', null, null, null, null, 'Foo', $typeOrigin),
             snippet: new CodeSnippet($line, $line, ['foo();']),
             contextTrace: new ContextTrace([]),
             fixHint: new FixHint('wrong inferred type', 'add guard or fix upstream type'),
