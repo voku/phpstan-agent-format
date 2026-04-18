@@ -107,7 +107,7 @@ final readonly class IssueNormalizer
         $method = $this->extractMethodName($message);
         $function = $this->extractFunctionName($message);
         $parameter = $this->extractParameterName($message);
-        $expectedType = $this->extractExpectedType($message);
+        $expectedAndInferredTypes = $this->extractExpectedAndInferredTypes($message);
 
         if ($class === null) {
             $class = $this->extractClassName($message);
@@ -119,8 +119,8 @@ final readonly class IssueNormalizer
             propertyName: $property,
             functionName: $function,
             parameterName: $parameter,
-            expectedType: $expectedType,
-            inferredType: $this->extractInferredType($message),
+            expectedType: $this->extractExpectedType($message, $expectedAndInferredTypes),
+            inferredType: $this->extractInferredType($message, $expectedAndInferredTypes),
             typeOrigin: $this->extractTypeOrigin($ruleIdentifier, $tip),
         );
     }
@@ -191,9 +191,11 @@ final readonly class IssueNormalizer
         return null;
     }
 
-    private function extractExpectedType(string $message): ?string
+    /**
+     * @param array{0: string, 1: string}|null $expectedAndInferredTypes
+     */
+    private function extractExpectedType(string $message, ?array $expectedAndInferredTypes = null): ?string
     {
-        $expectedAndInferredTypes = $this->extractExpectedAndInferredTypes($message);
         if ($expectedAndInferredTypes !== null) {
             return $expectedAndInferredTypes[0];
         }
@@ -222,9 +224,11 @@ final readonly class IssueNormalizer
         return $candidate;
     }
 
-    private function extractInferredType(string $message): ?string
+    /**
+     * @param array{0: string, 1: string}|null $expectedAndInferredTypes
+     */
+    private function extractInferredType(string $message, ?array $expectedAndInferredTypes = null): ?string
     {
-        $expectedAndInferredTypes = $this->extractExpectedAndInferredTypes($message);
         if ($expectedAndInferredTypes !== null) {
             return $expectedAndInferredTypes[1];
         }
@@ -253,7 +257,6 @@ final readonly class IssueNormalizer
     private function extractExpectedAndInferredTypes(string $message): ?array
     {
         foreach ([
-            '/expects parameter [^,]+?(?:\s+to be)?\s+(.+?)\s+given(?:\.|$)/i',
             '/expects\s+(.+?)\s+given(?:\.|$)/i',
         ] as $pattern) {
             if (preg_match($pattern, $message, $match) !== 1) {
