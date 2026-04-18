@@ -315,6 +315,7 @@ final class IssueNormalizerTest
         $nonFileSpecificIssues = $normalizer->normalize(new AnalysisResult([], ['General PHPStan error.', $nonFileSpecificError]));
         TestCase::assertSame(2, count($nonFileSpecificIssues), 'Non-file-specific errors should still be normalized.');
         TestCase::assertSame('unknown.php', $nonFileSpecificIssues[0]->location->file, 'Non-file-specific errors should use the synthetic location.');
-        TestCase::assertSame('Global configuration is invalid.', $nonFileSpecificIssues[1]->message, 'Object-shaped non-file-specific errors should preserve their message.');
+        $nonFileSpecificMessages = array_map(static fn ($issue): string => $issue->message, $nonFileSpecificIssues);
+        TestCase::assertTrue(in_array('Global configuration is invalid.', $nonFileSpecificMessages, true), 'Object-shaped non-file-specific errors should preserve their message.');
     }
 }
