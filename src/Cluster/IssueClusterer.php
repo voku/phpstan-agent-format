@@ -108,7 +108,11 @@ final readonly class IssueClusterer
     {
         $identifierGroup = $this->identifierGroup($ruleIdentifier);
 
-        return self::IDENTIFIER_FAMILY_GROUPS[$identifierGroup] ?? $ruleIdentifier ?? '_rule';
+        if ($identifierGroup !== null && isset(self::IDENTIFIER_FAMILY_GROUPS[$identifierGroup])) {
+            return self::IDENTIFIER_FAMILY_GROUPS[$identifierGroup];
+        }
+
+        return $ruleIdentifier ?? '_rule';
     }
 
     private function kindFromIdentifier(?string $ruleIdentifier): ?string
@@ -136,6 +140,10 @@ final readonly class IssueClusterer
     {
         $group = $this->identifierGroup($typeOrigin);
 
-        return self::IDENTIFIER_FAMILY_GROUPS[$group] ?? $typeOrigin ?? '_origin';
+        if ($group !== null && isset(self::IDENTIFIER_FAMILY_GROUPS[$group])) {
+            return self::IDENTIFIER_FAMILY_GROUPS[$group];
+        }
+
+        return $typeOrigin ?? '_origin';
     }
 }
