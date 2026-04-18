@@ -11,14 +11,17 @@ use Voku\PhpstanAgentFormat\Dto\IssueCluster;
 final readonly class IssueClusterer
 {
     /**
+     * PHPStan identifier families that are stable enough to use as clustering buckets
+     * before falling back to exact identifiers or message heuristics.
+     *
      * @var array<string, string>
      */
     private const IDENTIFIER_FAMILY_GROUPS = [
-        'missingType' => 'missingType.*',
-        'ignore' => 'ignore.*',
-        'nullableType' => 'nullableType.*',
-        'nullCoalesce' => 'nullCoalesce.*',
-        'nullsafe' => 'nullsafe.*',
+        'missingType' => 'missingType',
+        'ignore' => 'ignore',
+        'nullableType' => 'nullableType',
+        'nullCoalesce' => 'nullCoalesce',
+        'nullsafe' => 'nullsafe',
     ];
 
     public function __construct(private AgentFormatConfig $config)
