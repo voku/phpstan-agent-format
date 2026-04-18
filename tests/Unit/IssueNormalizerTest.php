@@ -88,6 +88,31 @@ final class IssueNormalizerTest
                 return 'argument.type';
             }
         };
+        $genericParameterTypeError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 9;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Parameter #1 $items of function genericParameterFixture expects array<int, string>, array<string, int> given.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'argument.type';
+            }
+        };
         $nonObjectMethodError = new class ($fixtureFile) {
             public function __construct(private readonly string $file)
             {
@@ -287,6 +312,12 @@ final class IssueNormalizerTest
         TestCase::assertSame('value', $parameterIssues[0]->symbolContext->parameterName, 'Method parameter names should be exposed for repair suggestions.');
         TestCase::assertSame('string', $parameterIssues[0]->symbolContext->expectedType, 'Method parameter messages should expose the expected type.');
         TestCase::assertSame('int', $parameterIssues[0]->symbolContext->inferredType, 'Parameter-focused PHPStan messages should also expose the given type.');
+
+        $genericParameterIssues = $normalizer->normalize(new AnalysisResult([$genericParameterTypeError], []));
+        TestCase::assertSame('items', $genericParameterIssues[0]->symbolContext->parameterName, 'Generic parameter messages should preserve the argument name.');
+        TestCase::assertSame('genericParameterFixture', $genericParameterIssues[0]->symbolContext->functionName, 'Generic parameter messages should preserve the function name.');
+        TestCase::assertSame('array<int, string>', $genericParameterIssues[0]->symbolContext->expectedType, 'Generic parameter messages should preserve expected types with nested commas.');
+        TestCase::assertSame('array<string, int>', $genericParameterIssues[0]->symbolContext->inferredType, 'Generic parameter messages should preserve inferred types with nested commas.');
 
         $nonObjectIssues = $normalizer->normalize(new AnalysisResult([$nonObjectMethodError], []));
         TestCase::assertSame('trim', $nonObjectIssues[0]->symbolContext->methodName, 'Non-object method access should expose the accessed member name.');

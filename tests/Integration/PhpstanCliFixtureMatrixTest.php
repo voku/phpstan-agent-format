@@ -21,6 +21,7 @@ final class PhpstanCliFixtureMatrixTest
             '    level: max',
             '    paths:',
             '        - ' . $root . '/tests/Fixture/ArrayShapeReturn.php',
+            '        - ' . $root . '/tests/Fixture/GenericParameter.php',
             '        - ' . $root . '/tests/Fixture/MethodOnString.php',
             '        - ' . $root . '/tests/Fixture/NullCoalesceVariable.php',
             '    agentFormat:',
@@ -62,7 +63,7 @@ final class PhpstanCliFixtureMatrixTest
              * } $decoded */
             $decoded = json_decode($output, true, 512, JSON_THROW_ON_ERROR);
 
-            TestCase::assertSame(3, $decoded['summary']['totalIssues'], 'Fixture matrix should contribute three distinct issues.');
+            TestCase::assertSame(4, $decoded['summary']['totalIssues'], 'Fixture matrix should contribute four distinct issues.');
 
             $issuesByMessage = [];
             $kindsByMessage = [];
@@ -80,6 +81,13 @@ final class PhpstanCliFixtureMatrixTest
             TestCase::assertSame('arrayShapeFixture', $arrayShapeIssue['symbolContext']['functionName'], 'Array-shape function names should be preserved.');
             TestCase::assertSame('array{foo: int}', $arrayShapeIssue['symbolContext']['expectedType'], 'Array-shape expected return types should be extracted.');
             TestCase::assertSame("array{foo: 'x'}", $arrayShapeIssue['symbolContext']['inferredType'], 'Array-shape actual return types should be extracted.');
+
+            $genericParameterIssue = $issuesByMessage['Parameter #1 $items of function genericParameterFixture expects array<int, string>, array<string, int> given.'] ?? null;
+            TestCase::assertTrue(is_array($genericParameterIssue), 'Generic-parameter fixture should be present.');
+            /** @var array{message: string, symbolContext: array{methodName: ?string, functionName: ?string, expectedType: ?string, inferredType: ?string, parameterName?: ?string}, rootCauseSummary: string} $genericParameterIssue */
+            TestCase::assertSame('genericParameterFixture', $genericParameterIssue['symbolContext']['functionName'], 'Generic parameter mismatches should preserve function names.');
+            TestCase::assertSame('array<int, string>', $genericParameterIssue['symbolContext']['expectedType'], 'Generic parameter mismatches should preserve expected types with inner commas.');
+            TestCase::assertSame('array<string, int>', $genericParameterIssue['symbolContext']['inferredType'], 'Generic parameter mismatches should preserve inferred types with inner commas.');
 
             $methodIssue = $issuesByMessage['Cannot call method trim() on string.'] ?? null;
             TestCase::assertTrue(is_array($methodIssue), 'Non-object method fixture should be present.');

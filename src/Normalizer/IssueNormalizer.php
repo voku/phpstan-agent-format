@@ -19,8 +19,6 @@ final readonly class IssueNormalizer
      * @var array<string, 1|2>
      */
     private const INFERRED_TYPE_PATTERNS = [
-        '/expects parameter [^,]+?(?:\s+to be)?\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
-        '/expects\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
         '/should return\s+(.+?)\s+but returns\s+(.+?)(?:\.|$)/i' => 2,
         '/cannot call method [A-Za-z_][A-Za-z0-9_]*\(\) on\s+(.+?)(?:\.|$)/i' => 1,
         '/cannot access property \$[A-Za-z_][A-Za-z0-9_]* on\s+(.+?)(?:\.|$)/i' => 1,
@@ -33,8 +31,6 @@ final readonly class IssueNormalizer
      * @var array<string, 1>
      */
     private const EXPECTED_TYPE_PATTERNS = [
-        '/expects parameter [^,]+?(?:\s+to be)?\s+(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
-        '/expects\s+(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
         '/should return\s+(.+?)\s+but returns\s+.+?(?:\.|$)/i' => 1,
     ];
 
@@ -197,6 +193,11 @@ final readonly class IssueNormalizer
 
     private function extractExpectedType(string $message): ?string
     {
+        $expectedAndInferredTypes = $this->extractExpectedAndInferredTypes($message);
+        if ($expectedAndInferredTypes !== null) {
+            return $expectedAndInferredTypes[0];
+        }
+
         foreach (self::EXPECTED_TYPE_PATTERNS as $pattern => $index) {
             if (preg_match($pattern, $message, $match) !== 1) {
                 continue;
@@ -223,6 +224,11 @@ final readonly class IssueNormalizer
 
     private function extractInferredType(string $message): ?string
     {
+        $expectedAndInferredTypes = $this->extractExpectedAndInferredTypes($message);
+        if ($expectedAndInferredTypes !== null) {
+            return $expectedAndInferredTypes[1];
+        }
+
         foreach (self::INFERRED_TYPE_PATTERNS as $pattern => $index) {
             if (preg_match($pattern, $message, $match) !== 1) {
                 continue;
@@ -235,6 +241,86 @@ final readonly class IssueNormalizer
             $type = trim($match[$index]);
             if ($type !== '') {
                 return $type;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{0: string, 1: string}|null
+     */
+    private function extractExpectedAndInferredTypes(string $message): ?array
+    {
+        foreach ([
+            '/expects parameter [^,]+?(?:\s+to be)?\s+(.+?)\s+given(?:\.|$)/i',
+            '/expects\s+(.+?)\s+given(?:\.|$)/i',
+        ] as $pattern) {
+            if (preg_match($pattern, $message, $match) !== 1) {
+                continue;
+            }
+
+            $pair = $this->splitTopLevelTypePair(trim($match[1]));
+            if ($pair !== null) {
+                return [$this->normalizeExpectedTypeCandidate($pair[0]), $pair[1]];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{0: string, 1: string}|null
+     */
+    private function splitTopLevelTypePair(string $candidate): ?array
+    {
+        $angleDepth = 0;
+        $braceDepth = 0;
+        $bracketDepth = 0;
+        $parenthesisDepth = 0;
+        $length = strlen($candidate);
+
+        for ($i = 0; $i < $length; ++$i) {
+            $character = $candidate[$i];
+
+            switch ($character) {
+                case '<':
+                    ++$angleDepth;
+                    break;
+                case '>':
+                    $angleDepth = max(0, $angleDepth - 1);
+                    break;
+                case '{':
+                    ++$braceDepth;
+                    break;
+                case '}':
+                    $braceDepth = max(0, $braceDepth - 1);
+                    break;
+                case '[':
+                    ++$bracketDepth;
+                    break;
+                case ']':
+                    $bracketDepth = max(0, $bracketDepth - 1);
+                    break;
+                case '(':
+                    ++$parenthesisDepth;
+                    break;
+                case ')':
+                    $parenthesisDepth = max(0, $parenthesisDepth - 1);
+                    break;
+                case ',':
+                    if ($angleDepth !== 0 || $braceDepth !== 0 || $bracketDepth !== 0 || $parenthesisDepth !== 0) {
+                        break;
+                    }
+
+                    $expectedType = trim(substr($candidate, 0, $i));
+                    $inferredType = trim(substr($candidate, $i + 1));
+
+                    if ($expectedType !== '' && $inferredType !== '') {
+                        return [$expectedType, $inferredType];
+                    }
+
+                    return null;
             }
         }
 

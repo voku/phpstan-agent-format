@@ -8,6 +8,7 @@ parameters:
         - ../Fixture/MissingPropertyType.php
         - ../Fixture/MissingParameterType.php
         - ../Fixture/ArrayShapeReturn.php
+        - ../Fixture/GenericParameter.php
         - ../Fixture/MethodOnString.php
         - ../Fixture/NullCoalesceVariable.php
         - ../Fixture/PropertyOnString.php
