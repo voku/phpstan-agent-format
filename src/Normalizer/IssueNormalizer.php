@@ -580,7 +580,7 @@ final readonly class IssueNormalizer
             return false;
         }
 
-        return preg_match('/[A-Za-z_\\\\]+\s*<.+>/', $message) === 1;
+        return preg_match('/[A-Za-z_\\\\][A-Za-z0-9_\\\\]*\s*<.+>/', $message) === 1;
     }
 
 }

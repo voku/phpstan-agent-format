@@ -56,6 +56,19 @@ final class ClustererTest
         );
         $genericClusters = $clusterer->cluster([$genericMismatch]);
         TestCase::assertSame('generic-template-drift', $genericClusters[0]->kind, 'Generic argument drift should get a dedicated cluster kind.');
+
+        $digitGenericMismatch = new AgentIssue(
+            id: 'h',
+            message: 'Function genericReturnFixture() should return Model1<int, string> but returns Model2<string, int>.',
+            ruleIdentifier: 'return.type',
+            location: new FileLocation('/tmp/a.php', 31),
+            symbolContext: new SymbolContext(null, null, null, 'genericReturnFixture', null, 'Model1<int, string>', 'Model2<string, int>', 'return.type'),
+            snippet: new CodeSnippet(31, 31, ['return [\'x\' => 1];']),
+            contextTrace: new ContextTrace([]),
+            fixHint: new FixHint('generic drift', 'align templates'),
+        );
+        $digitGenericClusters = $clusterer->cluster([$digitGenericMismatch]);
+        TestCase::assertSame('generic-template-drift', $digitGenericClusters[0]->kind, 'Generic drift detection should allow digits in type identifiers.');
     }
 
     private static function issue(

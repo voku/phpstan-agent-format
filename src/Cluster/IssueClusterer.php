@@ -171,7 +171,7 @@ final readonly class IssueClusterer
             return false;
         }
 
-        return preg_match('/[A-Za-z_\\\\]+\s*<.+>/', $expected) === 1
-            && preg_match('/[A-Za-z_\\\\]+\s*<.+>/', $inferred) === 1;
+        return preg_match('/[A-Za-z_\\\\][A-Za-z0-9_\\\\]*\s*<.+>/', $expected) === 1
+            && preg_match('/[A-Za-z_\\\\][A-Za-z0-9_\\\\]*\s*<.+>/', $inferred) === 1;
     }
 }

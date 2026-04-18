@@ -113,6 +113,31 @@ final class IssueNormalizerTest
                 return 'argument.type';
             }
         };
+        $digitGenericParameterTypeError = new class ($fixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 9;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Parameter #1 $items of function genericParameterFixture expects Model1<int, string>, Model2<string, int> given.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'argument.type';
+            }
+        };
         $nonObjectMethodError = new class ($fixtureFile) {
             public function __construct(private readonly string $file)
             {
@@ -319,6 +344,20 @@ final class IssueNormalizerTest
         TestCase::assertSame('genericParameterFixture', $genericParameterIssues[0]->symbolContext->functionName, 'Generic parameter messages should preserve the function name.');
         TestCase::assertSame('array<int, string>', $genericParameterIssues[0]->symbolContext->expectedType, 'Generic parameter messages should preserve expected types with nested commas.');
         TestCase::assertSame('array<string, int>', $genericParameterIssues[0]->symbolContext->inferredType, 'Generic parameter messages should preserve inferred types with nested commas.');
+        TestCase::assertSame(
+            'Generic or template arguments drifted from the declared contract.',
+            $genericParameterIssues[0]->fixHint->rootCauseSummary,
+            'Generic parameter messages should get the dedicated generic mismatch fix hint.'
+        );
+
+        $digitGenericParameterIssues = $normalizer->normalize(new AnalysisResult([$digitGenericParameterTypeError], []));
+        TestCase::assertSame('Model1<int, string>', $digitGenericParameterIssues[0]->symbolContext->expectedType, 'Generic detection should preserve expected types containing digits.');
+        TestCase::assertSame('Model2<string, int>', $digitGenericParameterIssues[0]->symbolContext->inferredType, 'Generic detection should preserve inferred types containing digits.');
+        TestCase::assertSame(
+            'Generic or template arguments drifted from the declared contract.',
+            $digitGenericParameterIssues[0]->fixHint->rootCauseSummary,
+            'Generic mismatch fix hints should still apply when type identifiers contain digits.'
+        );
 
         $nonObjectIssues = $normalizer->normalize(new AnalysisResult([$nonObjectMethodError], []));
         TestCase::assertSame('trim', $nonObjectIssues[0]->symbolContext->methodName, 'Non-object method access should expose the accessed member name.');
