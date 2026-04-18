@@ -77,6 +77,7 @@ final class PhpstanCliIntegrationTest
 
             $nullableIssue = $issuesByMessage['Parameter #1 $string of function strlen expects string, string|null given.'] ?? null;
             TestCase::assertTrue(is_array($nullableIssue), 'Nullable fixture issue should be present.');
+            /** @var array{message: string, symbolContext: array{className: ?string, methodName: ?string, propertyName: ?string, functionName: ?string, parameterName: ?string, expectedType: ?string, inferredType: ?string}, snippet: array{lines: list<string>}} $nullableIssue */
             TestCase::assertSame('strlen', $nullableIssue['symbolContext']['functionName'], 'Function name should come from real PHPStan output.');
             TestCase::assertSame('string', $nullableIssue['symbolContext']['expectedType'], 'Expected type should be extracted from real PHPStan output.');
             TestCase::assertSame('string|null', $nullableIssue['symbolContext']['inferredType'], 'Given type should remain available from real PHPStan output.');
@@ -84,11 +85,13 @@ final class PhpstanCliIntegrationTest
 
             $propertyIssue = $issuesByMessage['Property MissingPropertyType::$name has no type specified.'] ?? null;
             TestCase::assertTrue(is_array($propertyIssue), 'Missing-property fixture issue should be present.');
+            /** @var array{message: string, symbolContext: array{className: ?string, methodName: ?string, propertyName: ?string, functionName: ?string, parameterName: ?string, expectedType: ?string, inferredType: ?string}, snippet: array{lines: list<string>}} $propertyIssue */
             TestCase::assertSame('MissingPropertyType', $propertyIssue['symbolContext']['className'], 'Property class name should be captured from real PHPStan output.');
             TestCase::assertSame('name', $propertyIssue['symbolContext']['propertyName'], 'Property name should be captured without losing the member name.');
 
             $parameterIssue = $issuesByMessage['Method MissingParameterType::run() has parameter $value with no type specified.'] ?? null;
             TestCase::assertTrue(is_array($parameterIssue), 'Missing-parameter fixture issue should be present.');
+            /** @var array{message: string, symbolContext: array{className: ?string, methodName: ?string, propertyName: ?string, functionName: ?string, parameterName: ?string, expectedType: ?string, inferredType: ?string}, snippet: array{lines: list<string>}} $parameterIssue */
             TestCase::assertSame('MissingParameterType::run', $parameterIssue['symbolContext']['methodName'], 'Method name should be captured from real PHPStan output.');
             TestCase::assertSame('value', $parameterIssue['symbolContext']['parameterName'], 'Parameter name should be captured from real PHPStan output.');
         } finally {

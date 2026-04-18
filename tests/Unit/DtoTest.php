@@ -34,6 +34,8 @@ final class DtoTest
         TestCase::assertSame('i1', $array['id'], 'Issue id should be stable.');
         TestCase::assertHasKey('contextTrace', $array, 'Issue must include context trace.');
         TestCase::assertSame('root', $array['rootCauseSummary'], 'Issue root cause should be preserved.');
-        TestCase::assertHasKey('expectedType', $array['symbolContext'], 'Issue should expose structured symbol repair hints.');
+        /** @var array<string, mixed> $symbolContext */
+        $symbolContext = $array['symbolContext'];
+        TestCase::assertHasKey('expectedType', $symbolContext, 'Issue should expose structured symbol repair hints.');
     }
 }

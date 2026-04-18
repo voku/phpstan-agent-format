@@ -19,7 +19,7 @@ final readonly class IssueNormalizer
      * @var array<string, 1|2>
      */
     private const INFERRED_TYPE_PATTERNS = [
-        '/expects parameter .*?(?:to be\s+)?(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
+        '/expects parameter .*? to be\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
         '/expects\s+(.+?),\s+(.+?)\s+given(?:\.|$)/i' => 2,
         '/does not accept(?: default value of type| value of type)?\s+(.+?)(?:\.|$)/i' => 1,
         '/with type\s+(.+?)\s+is not subtype of(?: native)? type\s+.+?(?:\.|$)/i' => 1,
@@ -29,7 +29,7 @@ final readonly class IssueNormalizer
      * @var array<string, 1>
      */
     private const EXPECTED_TYPE_PATTERNS = [
-        '/expects parameter .*?(?:to be\s+)?(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
+        '/expects parameter .*? to be\s+(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
         '/expects\s+(.+?),\s+.+?\s+given(?:\.|$)/i' => 1,
     ];
 
@@ -185,7 +185,7 @@ final readonly class IssueNormalizer
     private function extractExpectedType(string $message): ?string
     {
         foreach (self::EXPECTED_TYPE_PATTERNS as $pattern => $index) {
-            if (preg_match($pattern, $message, $match) !== 1 || !isset($match[$index])) {
+            if (preg_match($pattern, $message, $match) !== 1) {
                 continue;
             }
 
