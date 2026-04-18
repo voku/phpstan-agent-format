@@ -339,6 +339,7 @@ final class IssueNormalizerTest
 
         $offsetAccessIssues = $normalizer->normalize(new AnalysisResult([$offsetAccessError], []));
         TestCase::assertSame('string', $offsetAccessIssues[0]->symbolContext->inferredType, 'Offset-access messages should expose the container type.');
+        TestCase::assertSame('The inferred container type does not define the accessed offset.', $offsetAccessIssues[0]->fixHint->rootCauseSummary, 'Offset-access issues should provide a dedicated fix hint.');
 
         $metadataRichError = new class ($fixtureFile) {
             public function __construct(private readonly string $file)
@@ -393,7 +394,6 @@ final class IssueNormalizerTest
         TestCase::assertSame('array<int, string>', $metadataIssues[0]->symbolContext->expectedType, 'Metadata-backed expected types should be preserved.');
         TestCase::assertSame('array<string, int>', $metadataIssues[0]->symbolContext->inferredType, 'Metadata-backed inferred types should be preserved.');
         TestCase::assertSame('metadata', $metadataIssues[0]->symbolContext->typeOrigin, 'Metadata-backed type origins should be surfaced.');
-        TestCase::assertSame('The inferred container type does not define the accessed offset.', $offsetAccessIssues[0]->fixHint->rootCauseSummary, 'Offset-access issues should provide a dedicated fix hint.');
 
         $returnedValueIssues = $normalizer->normalize(new AnalysisResult([$returnedValueTipError], []));
         TestCase::assertSame('returned-value', $returnedValueIssues[0]->symbolContext->typeOrigin, 'Returned-value hints should be surfaced as a dedicated type origin.');

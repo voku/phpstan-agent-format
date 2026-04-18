@@ -11,6 +11,7 @@ use Voku\PhpstanAgentFormat\Dto\AgentIssue;
 use Voku\PhpstanAgentFormat\Dto\FileLocation;
 use Voku\PhpstanAgentFormat\Dto\FixHint;
 use Voku\PhpstanAgentFormat\Dto\SymbolContext;
+use Voku\PhpstanAgentFormat\Support\MetadataNormalizer;
 use Voku\PhpstanAgentFormat\Support\PhpstanTipHints;
 
 final readonly class IssueNormalizer
@@ -197,7 +198,7 @@ final readonly class IssueNormalizer
             }
 
             if (is_array($value)) {
-                $nested = $this->findMetadataString($this->normalizeMetadata($value), $aliases);
+                $nested = $this->findMetadataString(MetadataNormalizer::normalize($value), $aliases);
                 if ($nested !== null) {
                     return $nested;
                 }
@@ -564,7 +565,7 @@ final readonly class IssueNormalizer
 
         $value = $object->{$method}();
 
-        return is_array($value) ? $this->normalizeMetadata($value) : [];
+        return is_array($value) ? MetadataNormalizer::normalize($value) : [];
     }
 
     private function isGenericTemplateMismatch(string $message, ?string $ruleIdentifier): bool
@@ -581,30 +582,6 @@ final readonly class IssueNormalizer
 
         return preg_match('/[A-Za-z_\\\\]+\s*<.+>/', $message) === 1
             || preg_match('/array<.+>/', $message) === 1;
-    }
-
-    /**
-     * @param array<mixed> $metadata
-     * @return array<string, mixed>
-     */
-    private function normalizeMetadata(array $metadata): array
-    {
-        $normalized = [];
-
-        foreach ($metadata as $key => $value) {
-            if (!is_string($key) || $key === '') {
-                continue;
-            }
-
-            if (is_array($value)) {
-                $normalized[$key] = $this->normalizeMetadata($value);
-                continue;
-            }
-
-            $normalized[$key] = $value;
-        }
-
-        return $normalized;
     }
 
 }
