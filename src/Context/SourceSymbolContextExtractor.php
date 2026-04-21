@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace Voku\PhpstanAgentFormat\Context;
 
+use voku\SimplePhpParser\Model\BasePHPClass;
+use voku\SimplePhpParser\Model\BasePHPElement;
+use voku\SimplePhpParser\Model\PHPConst;
+use voku\SimplePhpParser\Model\PHPFunction;
+use voku\SimplePhpParser\Model\PHPParameter;
+use voku\SimplePhpParser\Model\PHPProperty;
 use voku\SimplePhpParser\Parsers\Helper\ParserContainer;
 use voku\SimplePhpParser\Parsers\PhpCodeParser;
 
@@ -35,21 +41,26 @@ final class SourceSymbolContextExtractor
 
         $line = max(1, $line);
         $classLike = $this->bestClassLike($container, $file, $line);
-        $method = $classLike !== null ? $this->bestByLine($classLike->methods, $file, $line) : null;
-        $property = $classLike !== null ? $this->bestByLine($classLike->properties, $file, $line) : null;
-        $function = $this->bestByLine($container->getFunctions(), $file, $line);
-        $constant = $classLike !== null
+        $methodCandidate = $classLike !== null ? $this->bestByLine($classLike->methods, $file, $line) : null;
+        $propertyCandidate = $classLike !== null ? $this->bestByLine($classLike->properties, $file, $line) : null;
+        $functionCandidate = $this->bestByLine($container->getFunctions(), $file, $line);
+        $constantCandidate = $classLike !== null
             ? $this->bestByLine($classLike->constants, $file, $line)
             : $this->bestByLine($container->getConstants(), $file, $line);
 
-        $className = is_string($classLike?->name) && $classLike->name !== '' ? $classLike->name : null;
+        $method = $methodCandidate instanceof PHPFunction ? $methodCandidate : null;
+        $property = $propertyCandidate instanceof PHPProperty ? $propertyCandidate : null;
+        $function = $functionCandidate instanceof PHPFunction ? $functionCandidate : null;
+        $constant = $constantCandidate instanceof PHPConst ? $constantCandidate : null;
+
+        $className = $classLike?->name !== '' ? $classLike?->name : null;
         $methodName = null;
-        if (is_string($method?->name) && $method->name !== '') {
+        if ($method?->name !== null && $method->name !== '') {
             $methodName = $className !== null ? $className . '::' . $method->name : $method->name;
         }
 
-        $propertyName = is_string($property?->name) && $property->name !== '' ? ltrim($property->name, '$') : null;
-        $functionName = is_string($function?->name) && $function->name !== '' ? $function->name : null;
+        $propertyName = $property?->name !== null && $property->name !== '' ? ltrim($property->name, '$') : null;
+        $functionName = $function?->name !== null && $function->name !== '' ? $function->name : null;
         $parameterName = $this->resolveParameterName($method, $function, $preferredParameter, $line);
 
         $resolvedProperty = $preferredProperty !== null && $preferredProperty !== '' ? $preferredProperty : $propertyName;
@@ -119,14 +130,14 @@ final class SourceSymbolContextExtractor
         return $this->parsedFiles[$file];
     }
 
-    private function bestClassLike(ParserContainer $container, string $file, int $line): ?object
+    private function bestClassLike(ParserContainer $container, string $file, int $line): ?BasePHPClass
     {
         $best = null;
         $bestLine = -1;
 
         foreach ([$container->getClasses(), $container->getTraits(), $container->getInterfaces(), $container->getEnums()] as $classLikes) {
             $candidate = $this->bestByLine($classLikes, $file, $line);
-            if ($candidate === null || !is_int($candidate->line) || $candidate->line < $bestLine) {
+            if ($candidate === null || $candidate->line === null || $candidate->line < $bestLine) {
                 continue;
             }
 
@@ -138,20 +149,22 @@ final class SourceSymbolContextExtractor
     }
 
     /**
-     * @param array<array-key, object> $elements
+     * @template T of BasePHPElement
+     * @param array<array-key, T> $elements
+     * @return T|null
      */
-    private function bestByLine(array $elements, string $file, int $line): ?object
+    private function bestByLine(array $elements, string $file, int $line): ?BasePHPElement
     {
         $best = null;
         $bestLine = -1;
 
         foreach ($elements as $element) {
-            $elementLine = is_int($element->line ?? null) ? $element->line : null;
+            $elementLine = $element->line;
             if ($elementLine === null || $elementLine > $line) {
                 continue;
             }
 
-            $elementFile = is_string($element->file ?? null) ? $element->file : null;
+            $elementFile = $element->file;
             if ($elementFile !== null && !$this->sameFile($elementFile, $file)) {
                 continue;
             }
@@ -175,25 +188,30 @@ final class SourceSymbolContextExtractor
         return $normalizedLeft === $normalizedRight;
     }
 
-    private function resolveParameterName(?object $method, ?object $function, ?string $preferredParameter, int $line): ?string
+    private function resolveParameterName(?PHPFunction $method, ?PHPFunction $function, ?string $preferredParameter, int $line): ?string
     {
         if ($preferredParameter !== null && $preferredParameter !== '') {
             return ltrim($preferredParameter, '$');
         }
 
         foreach ([$method, $function] as $callable) {
-            $parameters = is_array($callable?->parameters ?? null) ? $callable->parameters : [];
+            if ($callable === null) {
+                continue;
+            }
+
+            $parameters = $callable->parameters;
             if (count($parameters) !== 1) {
                 continue;
             }
 
-            $callableLine = is_int($callable->line ?? null) ? $callable->line : null;
+            $callableLine = $callable->line;
             if ($callableLine === null || $callableLine !== $line) {
                 continue;
             }
 
+            /** @var PHPParameter $parameter */
             $parameter = array_values($parameters)[0];
-            if (is_string($parameter->name ?? null) && $parameter->name !== '') {
+            if ($parameter->name !== '') {
                 return ltrim($parameter->name, '$');
             }
         }
@@ -205,10 +223,10 @@ final class SourceSymbolContextExtractor
      * @return array{0:?string,1:?string}
      */
     private function resolveExpectedType(
-        ?object $method,
-        ?object $function,
-        ?object $property,
-        ?object $constant,
+        ?PHPFunction $method,
+        ?PHPFunction $function,
+        ?PHPProperty $property,
+        ?PHPConst $constant,
         ?string $parameterName,
         ?string $propertyName,
     ): array {
@@ -219,7 +237,7 @@ final class SourceSymbolContextExtractor
             }
         }
 
-        if ($propertyName !== null && $property !== null && ltrim((string) ($property->name ?? ''), '$') === $propertyName) {
+        if ($propertyName !== null && $property !== null && ltrim($property->name, '$') === $propertyName) {
             return [$this->bestTypeFromElement($property), $this->typeOriginFromElement($property)];
         }
 
@@ -238,16 +256,16 @@ final class SourceSymbolContextExtractor
         return [null, null];
     }
 
-    private function findParameter(?object $callable, string $parameterName): ?object
+    private function findParameter(?PHPFunction $callable, string $parameterName): ?PHPParameter
     {
-        $parameters = is_array($callable?->parameters ?? null) ? $callable->parameters : [];
+        if ($callable === null) {
+            return null;
+        }
+
+        $parameters = $callable->parameters;
         $normalizedTarget = ltrim($parameterName, '$');
 
         foreach ($parameters as $parameter) {
-            if (!is_string($parameter->name ?? null)) {
-                continue;
-            }
-
             if (ltrim($parameter->name, '$') === $normalizedTarget) {
                 return $parameter;
             }
@@ -256,38 +274,9 @@ final class SourceSymbolContextExtractor
         return null;
     }
 
-    private function bestTypeFromElement(object $element): ?string
+    private function bestTypeFromElement(PHPParameter|PHPProperty $element): ?string
     {
-        if (method_exists($element, 'getType')) {
-            $type = $element->getType();
-            if (is_string($type) && $type !== '') {
-                return $type;
-            }
-        }
-
-        return null;
-    }
-
-    private function bestCallableReturnType(object $callable): ?string
-    {
-        if (method_exists($callable, 'getReturnType')) {
-            $type = $callable->getReturnType();
-            if (is_string($type) && $type !== '') {
-                return $type;
-            }
-        }
-
-        return null;
-    }
-
-    private function bestTypeFromConstant(object $constant): ?string
-    {
-        $declarationType = is_string($constant->typeFromDeclaration ?? null) ? $constant->typeFromDeclaration : null;
-        if ($declarationType !== null && $declarationType !== '') {
-            return $declarationType;
-        }
-
-        $type = is_string($constant->type ?? null) ? $constant->type : null;
+        $type = $element->getType();
         if ($type !== null && $type !== '') {
             return $type;
         }
@@ -295,30 +284,57 @@ final class SourceSymbolContextExtractor
         return null;
     }
 
-    private function typeOriginFromElement(object $element): ?string
+    private function bestCallableReturnType(PHPFunction $callable): ?string
+    {
+        $type = $callable->getReturnType();
+        if ($type !== null && $type !== '') {
+            return $type;
+        }
+
+        return null;
+    }
+
+    private function bestTypeFromConstant(PHPConst $constant): ?string
+    {
+        $declarationType = $constant->typeFromDeclaration;
+        if ($declarationType !== null && $declarationType !== '') {
+            return $declarationType;
+        }
+
+        $type = $constant->type;
+        if ($type !== null && $type !== '') {
+            return $type;
+        }
+
+        return null;
+    }
+
+    private function typeOriginFromElement(PHPParameter|PHPProperty $element): ?string
     {
         foreach (['typeFromPhpDocExtended', 'typeFromPhpDoc', 'typeFromPhpDocSimple'] as $property) {
-            if (is_string($element->{$property} ?? null) && $element->{$property} !== '') {
+            $value = $element->{$property};
+            if (is_string($value) && $value !== '') {
                 return 'phpdoc';
             }
         }
 
-        if (is_string($element->type ?? null) && $element->type !== '') {
+        if ($element->type !== null && $element->type !== '') {
             return 'native';
         }
 
         return null;
     }
 
-    private function typeOriginFromCallable(object $callable): ?string
+    private function typeOriginFromCallable(PHPFunction $callable): ?string
     {
         foreach (['returnTypeFromPhpDocExtended', 'returnTypeFromPhpDoc', 'returnTypeFromPhpDocSimple'] as $property) {
-            if (is_string($callable->{$property} ?? null) && $callable->{$property} !== '') {
+            $value = $callable->{$property};
+            if (is_string($value) && $value !== '') {
                 return 'phpdoc';
             }
         }
 
-        if (is_string($callable->returnType ?? null) && $callable->returnType !== '') {
+        if ($callable->returnType !== null && $callable->returnType !== '') {
             return 'native';
         }
 
