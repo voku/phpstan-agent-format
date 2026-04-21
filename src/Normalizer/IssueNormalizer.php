@@ -6,6 +6,7 @@ namespace Voku\PhpstanAgentFormat\Normalizer;
 
 use PHPStan\Command\AnalysisResult;
 use Voku\PhpstanAgentFormat\Context\ContextExtractor;
+use Voku\PhpstanAgentFormat\Context\SourceSymbolContextExtractor;
 use Voku\PhpstanAgentFormat\Context\ContextTraceBuilder;
 use Voku\PhpstanAgentFormat\Dto\AgentIssue;
 use Voku\PhpstanAgentFormat\Dto\FileLocation;
@@ -38,6 +39,7 @@ final readonly class IssueNormalizer
     public function __construct(
         private ContextExtractor $contextExtractor,
         private ContextTraceBuilder $traceBuilder,
+        private SourceSymbolContextExtractor $sourceSymbolContextExtractor = new SourceSymbolContextExtractor(),
     ) {
     }
 
@@ -76,7 +78,7 @@ final readonly class IssueNormalizer
             $location = new FileLocation($filePath, $line);
             $nodeLocation = $nodeLine !== null && $nodeLine !== $line ? new FileLocation($filePath, $this->normalizeLineNumber($nodeLine)) : null;
             $traitLocation = $traitFilePath !== null && $nodeLine !== null ? new FileLocation($traitFilePath, $this->normalizeLineNumber($nodeLine)) : null;
-            $symbolContext = $this->extractSymbolContext($message, $ruleIdentifier, $tip, $metadata);
+            $symbolContext = $this->extractSymbolContext($message, $ruleIdentifier, $tip, $metadata, $filePath, $line);
             $snippet = $this->contextExtractor->extractSnippet($filePath, $line);
             $fixHint = $this->createFixHint($message, $ruleIdentifier);
 
@@ -119,7 +121,7 @@ final readonly class IssueNormalizer
     /**
      * @param array<array-key, mixed> $metadata
      */
-    private function extractSymbolContext(string $message, ?string $ruleIdentifier, ?string $tip = null, array $metadata = []): SymbolContext
+    private function extractSymbolContext(string $message, ?string $ruleIdentifier, ?string $tip = null, array $metadata = [], ?string $file = null, ?int $line = null): SymbolContext
     {
         [$class, $property] = $this->extractPropertyContext($message);
         $method = $this->extractMethodName($message);
@@ -127,12 +129,18 @@ final readonly class IssueNormalizer
         $parameter = $this->extractParameterName($message);
         $expectedAndInferredTypes = $this->extractExpectedAndInferredTypes($message);
         $metadataSymbolContext = $this->extractMetadataSymbolContext($metadata);
+        $sourceSymbolContext = ($file !== null && $line !== null)
+            ? $this->sourceSymbolContextExtractor->extract($file, $line, $parameter, $property)
+            : [];
 
-        $class = $metadataSymbolContext['className'] ?? $class ?? $this->extractClassName($message);
-        $property = $metadataSymbolContext['propertyName'] ?? $property;
-        $method = $metadataSymbolContext['methodName'] ?? $method;
-        $function = $metadataSymbolContext['functionName'] ?? $function;
-        $parameter = $metadataSymbolContext['parameterName'] ?? $parameter;
+        $class = $metadataSymbolContext['className'] ?? $class ?? $this->extractClassName($message) ?? ($sourceSymbolContext['className'] ?? null);
+        $property = $metadataSymbolContext['propertyName'] ?? $property ?? ($sourceSymbolContext['propertyName'] ?? null);
+        $method = $metadataSymbolContext['methodName'] ?? $method ?? ($sourceSymbolContext['methodName'] ?? null);
+        $function = $metadataSymbolContext['functionName'] ?? $function ?? ($sourceSymbolContext['functionName'] ?? null);
+        $parameter = $metadataSymbolContext['parameterName'] ?? $parameter ?? ($sourceSymbolContext['parameterName'] ?? null);
+        $expectedType = $metadataSymbolContext['expectedType'] ?? $this->extractExpectedType($message, $expectedAndInferredTypes) ?? ($sourceSymbolContext['expectedType'] ?? null);
+        $inferredType = $metadataSymbolContext['inferredType'] ?? $this->extractInferredType($message, $expectedAndInferredTypes) ?? ($sourceSymbolContext['inferredType'] ?? null);
+        $typeOrigin = $metadataSymbolContext['typeOrigin'] ?? $this->extractTypeOrigin($ruleIdentifier, $tip) ?? ($sourceSymbolContext['typeOrigin'] ?? null);
 
         return new SymbolContext(
             className: $class,
@@ -140,9 +148,9 @@ final readonly class IssueNormalizer
             propertyName: $property,
             functionName: $function,
             parameterName: $parameter,
-            expectedType: $metadataSymbolContext['expectedType'] ?? $this->extractExpectedType($message, $expectedAndInferredTypes),
-            inferredType: $metadataSymbolContext['inferredType'] ?? $this->extractInferredType($message, $expectedAndInferredTypes),
-            typeOrigin: $metadataSymbolContext['typeOrigin'] ?? $this->extractTypeOrigin($ruleIdentifier, $tip),
+            expectedType: $expectedType,
+            inferredType: $inferredType,
+            typeOrigin: $typeOrigin,
         );
     }
 

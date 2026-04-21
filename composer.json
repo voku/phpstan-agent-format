@@ -5,7 +5,8 @@
   "license": "MIT",
   "require": {
     "php": "^8.2",
-    "phpstan/phpstan": "^2.1"
+    "phpstan/phpstan": "^2.1",
+    "voku/simple-php-code-parser": "^0.21"
   },
   "autoload": {
     "psr-4": {

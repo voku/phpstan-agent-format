@@ -304,6 +304,32 @@ final class IssueNormalizerTest
                 return 'config.invalid';
             }
         };
+        $sourceContextFixtureFile = dirname(__DIR__) . '/Fixture/SourceContextFixture.php';
+        $sourceFallbackError = new class ($sourceContextFixtureFile) {
+            public function __construct(private readonly string $file)
+            {
+            }
+
+            public function getFile(): string
+            {
+                return $this->file;
+            }
+
+            public function getLine(): int
+            {
+                return 12;
+            }
+
+            public function getMessage(): string
+            {
+                return 'Custom analyzer detected an issue for parameter $value.';
+            }
+
+            public function getIdentifier(): string
+            {
+                return 'custom.rule';
+            }
+        };
 
         $normalizer = new IssueNormalizer(
             new ContextExtractor(new AgentFormatConfig('agentJson', 30, 3, 1, 1, false, true, 12000, [])),
@@ -482,6 +508,12 @@ final class IssueNormalizerTest
         TestCase::assertSame('items', $metadataListIssues[0]->symbolContext->parameterName, 'Metadata normalization should preserve nested list entries.');
         TestCase::assertSame('array<int, string>', $metadataListIssues[0]->symbolContext->expectedType, 'List-based metadata should preserve expected types.');
         TestCase::assertSame('array<string, int>', $metadataListIssues[0]->symbolContext->inferredType, 'List-based metadata should preserve inferred types.');
+
+        $sourceFallbackIssues = $normalizer->normalize(new AnalysisResult([$sourceFallbackError], []));
+        TestCase::assertSame('SourceContextFixture', $sourceFallbackIssues[0]->symbolContext->className, 'Source parsing should expose class context when the message is sparse.');
+        TestCase::assertSame('SourceContextFixture::hydrate', $sourceFallbackIssues[0]->symbolContext->methodName, 'Source parsing should expose method context when the message is sparse.');
+        TestCase::assertSame('value', $sourceFallbackIssues[0]->symbolContext->parameterName, 'Source parsing should preserve message-derived parameter names.');
+        TestCase::assertSame('non-empty-string', $sourceFallbackIssues[0]->symbolContext->expectedType, 'Source parsing should enrich expected types from phpdoc-aware parameter metadata.');
 
         $returnedValueIssues = $normalizer->normalize(new AnalysisResult([$returnedValueTipError], []));
         TestCase::assertSame('returned-value', $returnedValueIssues[0]->symbolContext->typeOrigin, 'Returned-value hints should be surfaced as a dedicated type origin.');
