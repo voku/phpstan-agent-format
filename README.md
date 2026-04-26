@@ -14,6 +14,34 @@ This package groups related findings, deduplicates repeated symptoms, and includ
 composer require --dev voku/phpstan-agent-format
 ```
 
+This package ships a PHPStan error formatter named `agent`.
+If you include `extension.neon`, `--error-format=agent` emits TOON by default.
+
+## Quick start for coding agents
+
+Use the formatter as if it were a small repair skill:
+
+> You are fixing PHPStan issues in this repository.
+> Run PHPStan with `--error-format=agent`.
+> Read the TOON envelope.
+> Prioritize `rootCauseSummary`, `repairStrategySummary`, `symbolContext`, snippets, and `contextTrace`.
+> Make the smallest safe code change that removes the reported issue without changing unrelated behavior.
+
+Typical loop:
+
+```bash
+vendor/bin/phpstan analyse --error-format=agent
+```
+
+Recommended agent workflow:
+
+1. Read `summary` to understand issue count and clustering.
+2. Tackle one cluster at a time using `kind`, `ruleIdentifier`, and `affectedFiles`.
+3. Use each representative issue's `symbolContext` and snippet to locate the fix.
+4. Re-run PHPStan after the change and confirm the cluster disappears.
+
+When an agent needs JSON instead of TOON, set `agentFormat.outputMode: json`.
+
 ## Configure
 
 ```neon
