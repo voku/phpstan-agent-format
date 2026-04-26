@@ -6,7 +6,7 @@ parameters:
     paths:
         - ../src
     agentFormat:
-        outputMode: json
+        outputMode: toon
         maxClusters: 30
         maxIssuesPerCluster: 3
         snippetLinesBefore: 2

@@ -1,6 +1,7 @@
 # voku/phpstan-agent-format
 
 `voku/phpstan-agent-format` adds a custom PHPStan formatter named `agent` that emits compact, deterministic v2 repair envelopes for coding agents.
+The default output now uses TOON (Token-Oriented Object Notation) for better token efficiency in LLM repair loops.
 
 ## Why
 
@@ -12,6 +13,34 @@ This package groups related findings, deduplicates repeated symptoms, and includ
 ```bash
 composer require --dev voku/phpstan-agent-format
 ```
+
+This package ships a PHPStan error formatter named `agent`.
+If you include `extension.neon`, `--error-format=agent` emits TOON by default.
+
+## Quick start for coding agents
+
+Use the formatter as if it were a small repair skill:
+
+> You are fixing PHPStan issues in this repository.
+> Run PHPStan with `--error-format=agent`.
+> Read the TOON envelope.
+> Prioritize `rootCauseSummary`, `repairStrategySummary`, `symbolContext`, snippets, and `contextTrace`.
+> Make the smallest safe code change that removes the reported issue without changing unrelated behavior.
+
+Typical loop:
+
+```bash
+vendor/bin/phpstan analyse --error-format=agent
+```
+
+Recommended agent workflow:
+
+1. Read `summary` to understand issue count and clustering.
+2. Tackle one cluster at a time using `kind`, `ruleIdentifier`, and `affectedFiles`.
+3. Use each representative issue's `symbolContext` and snippet to locate the fix.
+4. Re-run PHPStan after the change and confirm the cluster disappears.
+
+When an agent needs JSON instead of TOON, set `agentFormat.outputMode: json`.
 
 ## Configure
 
@@ -25,7 +54,7 @@ parameters:
         - src
 
     agentFormat:
-        outputMode: json
+        outputMode: toon
         maxClusters: 30
         maxIssuesPerCluster: 3
         snippetLinesBefore: 2
@@ -51,12 +80,34 @@ v2 also supports formatting a prior `--error-format=json` PHPStan export through
 
 ## Output modes
 
-- `agentJson` (default)
+- `agentToon` (default)
+- `agentJson`
 - `agentNdjson`
 - `agentMarkdown`
 - `agentCompact`
 
-Accepted aliases for `outputMode`: `json`, `ndjson`, `markdown`, `compact`.
+Accepted aliases for `outputMode`: `toon`, `json`, `ndjson`, `markdown`, `compact`.
+
+## Envelope shape (TOON)
+
+```text
+tool: phpstan-agent-format
+version: 2.0.0
+schema:
+  name: phpstan-agent-format
+  version: 2.0.0
+phpstanVersion: 2.1.50
+summary:
+  totalIssues: 3
+  clusters: 1
+  suppressedDuplicates: 2
+  tokenStats:
+    estimatedTokens: 420
+    tokenBudget: 12000
+    wasReduced: false
+clusters[1]{clusterId,kind,ruleIdentifier,rootCauseSummary,repairStrategySummary,confidence,affectedFiles,representativeIssues,suppressedDuplicateCount}:
+  6fdafecf6214,nullable-propagation,argument.type,Nullable value reaches a non-null expectation.,Constrain nullability earlier or widen the target type to accept null.,0.7,[1]: src/Example.php,[0]:,2
+```
 
 ## Envelope shape (JSON)
 
@@ -135,6 +186,7 @@ Snippets are redacted using configurable regex patterns before serialization.
 See `/examples/`:
 
 - `agent-json-example.json`
+- `agent-toon-example.toon`
 - `agent-ndjson-example.ndjson`
 - `agent-markdown-example.md`
 - `agent-compact-example.txt`

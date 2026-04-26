@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 
+$autoloadPath = $root . '/vendor/autoload.php';
+if (is_file($autoloadPath)) {
+    require_once $autoloadPath;
+}
+
 $stubFiles = [];
 $stubIterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/tests/Stubs'));
 foreach ($stubIterator as $file) {
