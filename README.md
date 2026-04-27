@@ -1,48 +1,169 @@
 # voku/phpstan-agent-format
 
-`voku/phpstan-agent-format` adds a custom PHPStan formatter named `agent` that emits compact, deterministic v2 repair envelopes for coding agents.
-The default output now uses TOON (Token-Oriented Object Notation) for better token efficiency in LLM repair loops.
+> 🚮 Stop feeding AI agents console garbage. Give them structured repair envelopes instead.
 
-## Why
+`voku/phpstan-agent-format` adds a custom PHPStan formatter named `agent` that emits compact, deterministic repair envelopes for coding agents.
+The default output uses [TOON](https://github.com/helgesverre/toon) for token-efficient LLM repair loops.
 
-PHPStan default output is optimized for humans and CI logs.
-This package groups related findings, deduplicates repeated symptoms, and includes compact context traces (not fake runtime stack traces).
+---
 
-## Install
+## ⚡ Quick start
 
 ```bash
 composer require --dev voku/phpstan-agent-format
 ```
 
-This package ships a PHPStan error formatter named `agent`.
-If you include `extension.neon`, `--error-format=agent` emits TOON by default.
+Add the extension to your `phpstan.neon`:
 
-## Quick start for coding agents
+```neon
+includes:
+    - vendor/voku/phpstan-agent-format/extension.neon
 
-Use the formatter as if it were a small repair skill:
+parameters:
+    level: max
+    paths:
+        - src
+```
 
-> You are fixing PHPStan issues in this repository.
-> Run PHPStan with `--error-format=agent`.
-> Read the TOON envelope.
-> Prioritize `rootCauseSummary`, `repairStrategySummary`, `symbolContext`, snippets, and `contextTrace`.
-> Make the smallest safe code change that removes the reported issue without changing unrelated behavior.
-
-Typical loop:
+Run PHPStan with the `agent` formatter:
 
 ```bash
 vendor/bin/phpstan analyse --error-format=agent
 ```
 
-Recommended agent workflow:
+That is enough to get agent-ready TOON output.
 
-1. Read `summary` to understand issue count and clustering.
-2. Tackle one cluster at a time using `kind`, `ruleIdentifier`, and `affectedFiles`.
-3. Use each representative issue's `symbolContext` and snippet to locate the fix.
-4. Re-run PHPStan after the change and confirm the cluster disappears.
+---
 
-When an agent needs JSON instead of TOON, set `agentFormat.outputMode: json`.
+## 🤖 Use as an agent skill
 
-## Configure
+Paste this into your coding agent's system prompt or context:
+
+> You are fixing PHPStan issues in this repository.
+> Run `vendor/bin/phpstan analyse --error-format=agent`.
+> Read the TOON envelope.
+> Pick **one cluster** at a time.
+> Use `rootCauseSummary`, `repairStrategySummary`, `symbolContext`, snippets, and `contextTrace` to understand the root cause.
+> Make the **smallest safe code change** that removes the reported issue without changing unrelated behavior.
+> Re-run PHPStan after each change and confirm the cluster disappears before moving on.
+
+Recommended agent loop:
+
+1. Read `summary` — understand total issue count and how many clusters were found.
+2. Pick one cluster — use `kind`, `ruleIdentifier`, and `affectedFiles` to locate it.
+3. Read the representative issue — `symbolContext` and the code snippet show where to act.
+4. Make the smallest safe change, then re-run PHPStan.
+5. Confirm the cluster is gone before picking the next one.
+
+When an agent needs JSON instead of TOON (e.g. for structured tool output), set `agentFormat.outputMode: json`.
+
+---
+
+## 🚮 Why this exists
+
+### The slot machine
+
+We take PHPStan output, dump it into CI, copy it into an AI prompt, and then act surprised when the agent starts fixing symptoms instead of the problem.
+
+❌ **bad:**
+
+```bash
+vendor/bin/phpstan analyse
+```
+
+Then copy 500 lines of terminal output into an AI tool and ask:
+
+```text
+please fix
+```
+
+Congratulations. You built a slot machine.
+
+✅ **better:**
+
+```bash
+vendor/bin/phpstan analyse --error-format=agent
+```
+
+Then give the agent structured repair information:
+
+```text
+Read the summary.
+Pick one cluster.
+Understand the root cause.
+Make the smallest safe change.
+Run PHPStan again.
+```
+
+This is not magic. This is basic tooling hygiene.
+
+### The problem with unstructured output
+
+Static analysis output for humans is not automatically good input for agents.
+
+Humans can read noisy CI logs and guess the hidden connection between ten errors. We can say: *"Ah, this is probably one nullable value leaking through the service layer."* Then we fix the source.
+
+Agents are not there yet unless we give them better input.
+
+Without structure, the agent sees this:
+
+```
+error
+error
+error
+error
+error
+```
+
+And then it does this:
+
+```
+change
+change
+change
+change
+break
+```
+
+That is not refactoring. That is automated panic.
+
+### What structured output looks like
+
+❌ **bad** (three separate errors, same root cause, no context):
+
+```
+src/UserMailer.php:42  — Parameter #1 $email expects string, string|null given.
+src/UserMailer.php:84  — Parameter #1 $email expects string, string|null given.
+src/UserRepository.php:129 — Parameter #1 $id expects int, int|null given.
+```
+
+Agent reaction: *Make everything nullable?*
+
+No. Bad agent. Sit.
+
+✅ **better** (one cluster, two files, clear repair path):
+
+```
+kind: nullable-propagation
+rootCauseSummary: Nullable value reaches a non-null expectation.
+repairStrategySummary: Constrain nullability earlier or widen the target type if the domain allows it.
+affectedFiles:
+  - src/UserMailer.php:42
+  - src/UserMailer.php:84
+  - src/UserRepository.php:129
+```
+
+Now we can work.
+
+`voku/phpstan-agent-format` groups related findings, deduplicates repeated symptoms, and includes compact context traces — giving the agent something closer to a repair plan instead of a wall of terminal sadness.
+
+And yes, this is still your job as a developer. The agent should not *decide architecture*. The agent should repair one cluster, with one small change, and then PHPStan should confirm that the problem disappeared.
+
+Same rule as with legacy code: **first think, then change, then check**.
+
+---
+
+## ⚙️ Configure
 
 ```neon
 includes:
@@ -74,21 +195,57 @@ Run:
 vendor/bin/phpstan analyse --error-format=agent
 ```
 
-The repository CI dogfoods both modes by running PHPStan once with the default formatter, once with `--error-format=agent` on the library itself, and again against committed failing/clean fixture configs that exercise the agent envelope on real PHPStan fixture output.
-The bundled extension also declares the `agentFormat` config schema, so real fixture configs can pass formatter options directly through PHPStan.
-v2 also supports formatting a prior `--error-format=json` PHPStan export through `AgentErrorFormatter::formatPhpstanJsonExport()`.
+### Configuration options
 
-## Output modes
+| Option | Default | Description |
+|---|---|---|
+| `outputMode` | `toon` | Serializer: `toon`, `json`, `ndjson`, `markdown`, `compact` |
+| `maxClusters` | `30` | Maximum number of issue clusters in the report |
+| `maxIssuesPerCluster` | `3` | Representative issues shown per cluster |
+| `snippetLinesBefore` | `2` | Source context lines before the reported line |
+| `snippetLinesAfter` | `3` | Source context lines after the reported line |
+| `includeDocblock` | `false` | Include nearby docblocks for extra type context |
+| `includeRelatedDefinition` | `true` | Attach related class/method/function definition |
+| `tokenBudget` | `12000` | Cap report size; reduction is deterministic when exceeded |
+| `redactPatterns` | `[]` | Regex patterns to redact secrets from snippets |
 
-- `agentToon` (default)
-- `agentJson`
-- `agentNdjson`
-- `agentMarkdown`
-- `agentCompact`
+---
 
-Accepted aliases for `outputMode`: `toon`, `json`, `ndjson`, `markdown`, `compact`.
+## 📋 Output modes
 
-## Envelope shape (TOON)
+| Mode | Alias | Best for |
+|---|---|---|
+| `agentToon` | `toon` | Default — token-efficient agent repair loops |
+| `agentJson` | `json` | Structured tool output, JSON-consuming agents |
+| `agentNdjson` | `ndjson` | Streaming / line-delimited pipelines |
+| `agentMarkdown` | `markdown` | Chat-based flows, paste into Copilot/Claude/ChatGPT |
+| `agentCompact` | `compact` | Ultra-compact text for tight token budgets |
+
+Switch the mode per workflow:
+
+```neon
+parameters:
+    agentFormat:
+        outputMode: markdown
+```
+
+```bash
+vendor/bin/phpstan analyse --error-format=agent > phpstan-agent.md
+```
+
+Then hand the markdown report to your agent:
+
+```text
+Read the phpstan-agent-format report.
+Treat each cluster as one underlying problem.
+Fix root causes instead of patching duplicates.
+Keep changes minimal and preserve behavior.
+Rerun PHPStan after each fix.
+```
+
+---
+
+## 📐 Envelope shape (TOON)
 
 ```text
 tool: phpstan-agent-format
@@ -106,10 +263,10 @@ summary:
     tokenBudget: 12000
     wasReduced: false
 clusters[1]{clusterId,kind,ruleIdentifier,rootCauseSummary,repairStrategySummary,confidence,affectedFiles,representativeIssues,suppressedDuplicateCount}:
-  6fdafecf6214,nullable-propagation,argument.type,Nullable value reaches a non-null expectation.,Constrain nullability earlier or widen the target type to accept null.,0.7,[1]: src/Example.php,[0]:,2
+  6fdafecf6214,nullable-propagation,argument.type,Nullable value reaches a non-null expectation.,Constrain nullability earlier or widen the target type to accept null.,0.7,[3]: src/UserMailer.php src/UserRepository.php,[0]:,2
 ```
 
-## Envelope shape (JSON)
+## 📐 Envelope shape (JSON)
 
 Representative issues include structured repair hints inside `symbolContext`, including the targeted parameter/property plus expected and inferred types when PHPStan exposes them.
 
@@ -140,15 +297,31 @@ Representative issues include structured repair hints inside `symbolContext`, in
       "rootCauseSummary": "Nullable value reaches a non-null expectation.",
       "repairStrategySummary": "Constrain nullability earlier or widen the target type to accept null.",
       "confidence": 0.7,
-      "affectedFiles": ["src/Example.php"],
-      "representativeIssues": [],
+      "affectedFiles": ["src/UserMailer.php", "src/UserRepository.php"],
+      "representativeIssues": [
+        {
+          "id": "a1b2c3d4",
+          "message": "Parameter #1 $email expects string, string|null given.",
+          "ruleIdentifier": "argument.type",
+          "location": { "file": "src/UserMailer.php", "line": 42 },
+          "symbolContext": {
+            "className": "UserMailer",
+            "methodName": "send",
+            "parameterName": "$email",
+            "expectedType": "string",
+            "inferredType": "string|null"
+          }
+        }
+      ],
       "suppressedDuplicateCount": 2
     }
   ]
 }
 ```
 
-## Clustering strategy (v2)
+---
+
+## 🧩 Clustering strategy (v2)
 
 First-pass clustering groups by:
 
@@ -159,41 +332,69 @@ First-pass clustering groups by:
 
 Cluster kinds include:
 
-- nullable propagation
-- missing type declaration
-- generic/template drift
-- array shape drift
-- undefined member from inferred type
-- invalid offset access
-- stale ignore/baseline noise
-- fallback: repeated same-rule same-symbol
+- 🔴 nullable propagation
+- 🟡 missing type declaration
+- 🟠 generic/template drift
+- 🟣 array shape drift
+- 🔵 undefined member from inferred type
+- ⚪ invalid offset access
+- 🟤 stale ignore/baseline noise
+- ⚫ fallback: repeated same-rule same-symbol
 
-## Token budget reduction strategy
+---
+
+## 💰 Token budget reduction strategy
 
 When estimated tokens exceed `tokenBudget`, degradation is deterministic and ordered:
 
-1. remove verbose/secondary details (secondary locations)
-2. shrink snippets to focused lines
-3. reduce representative issues per cluster
-4. keep root cause + repair strategy summaries
+1. Remove verbose/secondary details (secondary locations)
+2. Shrink snippets to focused lines
+3. Reduce representative issues per cluster
+4. Keep root cause + repair strategy summaries last
 
-## Security and privacy
+---
+
+## 🔒 Security and privacy
 
 Snippets are redacted using configurable regex patterns before serialization.
 
-## Example outputs
+```neon
+parameters:
+    agentFormat:
+        redactPatterns:
+            - '(?i)password\s*=\s*.+'
+            - '(?i)api[_-]?key\s*=\s*.+'
+```
+
+---
+
+## 📁 Example outputs
 
 See `/examples/`:
 
-- `agent-json-example.json`
 - `agent-toon-example.toon`
+- `agent-json-example.json`
 - `agent-ndjson-example.ndjson`
 - `agent-markdown-example.md`
 - `agent-compact-example.txt`
 
-## What's new in v2
+---
 
-- Symbol extraction now prefers structured PHPStan metadata when available and falls back to deterministic message heuristics.
+## 🔄 Reformat existing JSON exports
+
+If you already produce `phpstan --error-format=json`, reformat that payload without rebuilding your pipeline:
+
+```php
+$result = AgentErrorFormatter::formatPhpstanJsonExport($jsonString, $config);
+```
+
+The repository CI dogfoods both modes: PHPStan runs once with the default formatter, once with `--error-format=agent`, and again against committed fixture configs that exercise the agent envelope on real output.
+
+---
+
+## 🆕 What's new in v2
+
+- Symbol extraction now prefers structured PHPStan metadata and falls back to deterministic message heuristics.
 - Type-origin and propagation traces stay compact while exposing stable hop kinds for downstream consumers.
 - JSON output includes an explicit `schema` descriptor so the envelope can evolve without breaking the existing top-level contract.
 - PHPStan JSON exports can be reformatted through `AgentErrorFormatter::formatPhpstanJsonExport()`.

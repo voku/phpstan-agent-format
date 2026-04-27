@@ -1,4 +1,4 @@
-# Stop Feeding AI Agents Console Garbage
+# 🚮 Stop Feeding AI Agents Console Garbage
 
 ## Why do we give AI coding agents unreadable output?
 
@@ -10,7 +10,7 @@ And now we do the same thing with tools.
 
 We take PHPStan output, dump it into CI, copy it into an AI prompt, and then act surprised when the agent starts fixing symptoms instead of the problem.
 
-**bad:**
+❌ **bad:**
 
 ```bash
 vendor/bin/phpstan analyse
@@ -24,7 +24,7 @@ please fix
 
 Congratulations. You built a slot machine.
 
-**better:**
+✅ **better:**
 
 ```bash
 vendor/bin/phpstan analyse --error-format=agent
@@ -78,36 +78,39 @@ That is not refactoring. That is automated panic.
 
 [`voku/phpstan-agent-format`](https://github.com/voku/phpstan-agent-format) fixes exactly this boring but important problem. It adds a PHPStan formatter called `agent`, which emits compact deterministic repair envelopes for coding agents. The default output uses TOON, so the agent does not waste half its context window reading decorative JSON brackets like it is paid by the token.
 
-It groups related findings.
+It groups related findings. 📦
 
-It deduplicates repeated symptoms.
+It deduplicates repeated symptoms. ♻️
 
-It includes compact context traces.
+It includes compact context traces. 🗺️
 
-It gives the agent something closer to a repair plan instead of a wall of terminal sadness.
+It gives the agent something closer to a repair plan instead of a wall of terminal sadness. 🎯
 
-**bad:**
+❌ **bad** (three separate errors, same root cause, no context):
 
 ```
-Line 42: Parameter #1 expects string, string|null given.
-Line 84: Parameter #1 expects string, string|null given.
-Line 129: Parameter #1 expects string, string|null given.
+src/UserMailer.php:42  — Parameter #1 $email expects string, string|null given.
+src/UserMailer.php:84  — Parameter #1 $email expects string, string|null given.
+src/UserRepository.php:129 — Parameter #1 $id expects int, int|null given.
 ```
 
 Agent reaction: *Make everything nullable?*
 
-No. Bad agent. Sit.
+No. Bad agent. Sit. 🐕
 
-**better:**
+✅ **better** (one cluster, two files, clear repair path):
 
 ```
 kind: nullable-propagation
 rootCauseSummary: Nullable value reaches a non-null expectation.
 repairStrategySummary: Constrain nullability earlier or widen the target type if the domain allows it.
-affectedFiles: src/UserMailer.php
+affectedFiles:
+  - src/UserMailer.php:42
+  - src/UserMailer.php:84
+  - src/UserRepository.php:129
 ```
 
-Now we can work.
+Now we can work. 🛠️
 
 ---
 
@@ -115,15 +118,15 @@ And yes, this is still your job as a developer. The agent should not "decide arc
 
 Same rule as with legacy code:
 
-First think.
+**First think.** 🧠
 
-Then change.
+**Then change.** ✏️
 
-Then check.
+**Then check.** ✅
 
 Not the other way around.
 
-## Five-minute setup
+## ⚡ Five-minute setup
 
 Install the package:
 
@@ -154,7 +157,7 @@ vendor/bin/phpstan analyse --error-format=agent
 
 That is enough to get agent-ready output. The default TOON mode is already optimized for token-efficient repair loops.
 
-## Workflow
+## 🤖 Agent workflow
 
 For automation-friendly flows, the default TOON output is a good first choice:
 
@@ -196,7 +199,7 @@ Keep changes minimal and preserve behavior.
 Rerun PHPStan after each fix.
 ```
 
-## Good defaults, but still configurable
+## ⚙️ Good defaults, but still configurable
 
 The bundled extension already defines defaults and a schema for `agentFormat`, so you can start with a minimal config and tune later.
 
@@ -212,7 +215,7 @@ Useful options include:
 - `tokenBudget` — caps the report size so large outputs are reduced deterministically instead of growing without bound.
 - `redactPatterns` — removes secrets or sensitive values from snippets with regular-expression based redaction.
 
-## Also useful for existing JSON exports
+## 🔄 Also useful for existing JSON exports
 
 If you already produce `phpstan --error-format=json`, the package can also reformat that payload through `AgentErrorFormatter::formatPhpstanJsonExport()`.
 
