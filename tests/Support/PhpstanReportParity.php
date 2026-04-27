@@ -428,6 +428,7 @@ final class PhpstanReportParity
      *   startLine: int,
      *   highlightLine: int,
      *   lines: list<string>
+     * } $issue
      */
     private static function highlightedSnippetLine(array $issue): string
     {
