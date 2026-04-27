@@ -74,7 +74,7 @@ Run:
 vendor/bin/phpstan analyse --error-format=agent
 ```
 
-The repository CI dogfoods both modes by running PHPStan once with the default formatter, once with `--error-format=agent` on the library itself, and again against committed failing/clean fixture configs that exercise the agent envelope on real PHPStan fixture output.
+The repository CI dogfoods both modes by running PHPStan once with the default formatter, once with `--error-format=agent` on the library itself, explicitly comparing the default JSON report with grouped agent output via `composer phpstan-compare`, and again against committed failing/clean fixture configs that exercise the agent envelope on real PHPStan fixture output.
 The bundled extension also declares the `agentFormat` config schema, so real fixture configs can pass formatter options directly through PHPStan.
 The formatter also supports formatting a prior `--error-format=json` PHPStan export through `AgentErrorFormatter::formatPhpstanJsonExport()`.
 
