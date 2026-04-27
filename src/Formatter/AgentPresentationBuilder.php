@@ -60,7 +60,6 @@ final readonly class AgentPresentationBuilder
 
         $presentation = new PresentationResult(
             tool: self::TOOL_NAME,
-            version: '2.0.0',
             phpstanVersion: $this->phpstanVersion(),
             totalIssues: count($issues),
             suppressedDuplicates: $suppressedDuplicates,

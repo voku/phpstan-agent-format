@@ -20,7 +20,7 @@ final class SerializerTest
     public static function run(): void
     {
         $cluster = new IssueCluster('c1', 'same-rule-same-symbol', 'rule', 'root', 'repair', 1.0, ['/tmp/a.php:12'], [], 2);
-        $presentation = new PresentationResult('phpstan-agent-format', '2.0.0', '2.1.x', 2, 2, [$cluster], new TokenStats(5, 100, false));
+        $presentation = new PresentationResult('phpstan-agent-format', '2.1.x', 2, 2, [$cluster], new TokenStats(5, 100, false));
 
         $json1 = (new JsonAgentSerializer())->serialize($presentation);
         $json2 = (new JsonAgentSerializer())->serialize($presentation);

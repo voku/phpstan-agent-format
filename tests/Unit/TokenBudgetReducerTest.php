@@ -34,7 +34,7 @@ final class TokenBudgetReducerTest
         );
 
         $cluster = new IssueCluster('c1', 'nullable-propagation', 'nullable.mismatch', 'root', 'fix', 0.9, ['/tmp/a.php:20'], [$issue], 0);
-        $presentation = new PresentationResult('tool', '2.0.0', '2.1.x', 1, 0, [$cluster], new TokenStats(0, 1, false));
+        $presentation = new PresentationResult('tool', '2.1.x', 1, 0, [$cluster], new TokenStats(0, 1, false));
 
         $reducer = new TokenBudgetReducer(AgentFormatConfig::fromParameters(['tokenBudget' => 1]));
         $reduced = $reducer->reduce($presentation);

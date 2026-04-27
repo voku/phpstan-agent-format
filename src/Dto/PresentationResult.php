@@ -11,7 +11,6 @@ final readonly class PresentationResult
      */
     public function __construct(
         public string $tool,
-        public string $version,
         public string $phpstanVersion,
         public int $totalIssues,
         public int $suppressedDuplicates,
@@ -23,7 +22,6 @@ final readonly class PresentationResult
     /**
      * @return array{
      *     tool: string,
-     *     version: string,
      *     phpstanVersion: string,
      *     summary: array{
      *         totalIssues: int,
@@ -64,7 +62,6 @@ final readonly class PresentationResult
 
         return [
             'tool' => $this->tool,
-            'version' => $this->version,
             'phpstanVersion' => $this->phpstanVersion,
             'summary' => [
                 'totalIssues' => $this->totalIssues,
@@ -83,7 +80,6 @@ final readonly class PresentationResult
     {
         return new self(
             tool: $this->tool,
-            version: $this->version,
             phpstanVersion: $this->phpstanVersion,
             totalIssues: $this->totalIssues,
             suppressedDuplicates: $suppressedDuplicates,

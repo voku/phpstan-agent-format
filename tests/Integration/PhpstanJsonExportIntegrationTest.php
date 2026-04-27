@@ -32,7 +32,6 @@ final class PhpstanJsonExportIntegrationTest
 
         /** @var array{
          *   tool: string,
-         *   version: string,
          *   summary: array{totalIssues:int},
          *   clusters: list<array{representativeIssues:list<array{message:string}>}>
          * } $decoded */

@@ -36,7 +36,7 @@ vendor/bin/phpstan analyse --error-format=agent
 Recommended agent workflow:
 
 1. Read `summary` to understand issue count and clustering.
-2. Tackle one cluster at a time using `kind`, `ruleIdentifier`, and `affectedFiles` (`path:line` references).
+2. Tackle one cluster at a time using `kind`, `ruleIdentifier`, and `affectedFiles` (`path:line` references, so one file can appear multiple times when issues land on different lines).
 3. Use each representative issue's `symbolContext` and snippet to locate the fix.
 4. Re-run PHPStan after the change and confirm the cluster disappears.
 
@@ -92,7 +92,6 @@ Accepted aliases for `outputMode`: `toon`, `json`, `ndjson`, `markdown`, `compac
 
 ```text
 tool: phpstan-agent-format
-version: 2.0.0
 phpstanVersion: 2.1.50
 summary:
   totalIssues: 3
@@ -113,7 +112,6 @@ Representative issues include structured repair hints inside `symbolContext`, in
 ```json
 {
   "tool": "phpstan-agent-format",
-  "version": "2.0.0",
   "phpstanVersion": "2.1.50",
   "summary": {
     "totalIssues": 3,

@@ -1,5 +1,4 @@
 tool: phpstan-agent-format
-version: 2.0.0
 phpstanVersion: 2.1.50
 summary:
   totalIssues: 2

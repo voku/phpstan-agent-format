@@ -16,7 +16,6 @@ final class NdjsonAgentSerializer implements AgentSerializerInterface
 
         $summary = [
             'tool' => $root['tool'],
-            'version' => $root['version'],
             'phpstanVersion' => $root['phpstanVersion'],
             'summary' => $root['summary'],
         ];
