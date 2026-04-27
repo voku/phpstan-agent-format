@@ -7,7 +7,7 @@ namespace Voku\PhpstanAgentFormat\Dto;
 final readonly class IssueCluster
 {
     /**
-     * @param list<string> $affectedFiles
+     * @param list<string> $affectedFiles File references formatted as path:line.
      * @param list<AgentIssue> $representativeIssues
      */
     public function __construct(

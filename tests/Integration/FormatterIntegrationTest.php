@@ -86,6 +86,7 @@ final class FormatterIntegrationTest
         TestCase::assertSame('string', $issue['symbolContext']['expectedType'], 'Expected types should be surfaced when present.');
         TestCase::assertSame('string|null', $issue['symbolContext']['inferredType'], 'Given type should be captured as inferred type.');
         TestCase::assertSame('phpdoc', $issue['symbolContext']['typeOrigin'], 'PHPDoc type origin should be surfaced.');
+        TestCase::assertSame($fixtureFile . ':8', $decoded['clusters'][0]['affectedFiles'][0], 'Affected files should point agents at the exact source line.');
         TestCase::assertSame(1, count($issue['secondaryLocations']), 'Node-level origin should be surfaced as a secondary location.');
 
         $hasRichTraceHop = false;

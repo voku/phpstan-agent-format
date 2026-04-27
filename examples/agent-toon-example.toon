@@ -19,6 +19,6 @@ clusters[1]:
     rootCauseSummary: Nullable value reaches a non-null expectation.
     repairStrategySummary: Constrain nullability earlier or widen the target type to accept null.
     confidence: 0.7
-    affectedFiles[1]: src/Foo.php
+    affectedFiles[1]: src/Foo.php:57
     representativeIssues[0]:
     suppressedDuplicateCount: 1

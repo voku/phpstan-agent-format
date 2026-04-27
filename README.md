@@ -36,7 +36,7 @@ vendor/bin/phpstan analyse --error-format=agent
 Recommended agent workflow:
 
 1. Read `summary` to understand issue count and clustering.
-2. Tackle one cluster at a time using `kind`, `ruleIdentifier`, and `affectedFiles`.
+2. Tackle one cluster at a time using `kind`, `ruleIdentifier`, and `affectedFiles` (`path:line` references).
 3. Use each representative issue's `symbolContext` and snippet to locate the fix.
 4. Re-run PHPStan after the change and confirm the cluster disappears.
 
@@ -106,7 +106,7 @@ summary:
     tokenBudget: 12000
     wasReduced: false
 clusters[1]{clusterId,kind,ruleIdentifier,rootCauseSummary,repairStrategySummary,confidence,affectedFiles,representativeIssues,suppressedDuplicateCount}:
-  6fdafecf6214,nullable-propagation,argument.type,Nullable value reaches a non-null expectation.,Constrain nullability earlier or widen the target type to accept null.,0.7,[1]: src/Example.php,[0]:,2
+  6fdafecf6214,nullable-propagation,argument.type,Nullable value reaches a non-null expectation.,Constrain nullability earlier or widen the target type to accept null.,0.7,[1]: src/Example.php:57,[0]:,2
 ```
 
 ## Envelope shape (JSON)
@@ -140,7 +140,7 @@ Representative issues include structured repair hints inside `symbolContext`, in
       "rootCauseSummary": "Nullable value reaches a non-null expectation.",
       "repairStrategySummary": "Constrain nullability earlier or widen the target type to accept null.",
       "confidence": 0.7,
-      "affectedFiles": ["src/Example.php"],
+      "affectedFiles": ["src/Example.php:57"],
       "representativeIssues": [],
       "suppressedDuplicateCount": 2
     }

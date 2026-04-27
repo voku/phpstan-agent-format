@@ -28,6 +28,7 @@ final class ClustererTest
         TestCase::assertSame(1, count($clusters), 'Related issues should cluster together.');
         TestCase::assertSame(1, count($clusters[0]->representativeIssues), 'Representative issue limit should apply.');
         TestCase::assertSame(1, $clusters[0]->suppressedDuplicateCount, 'Duplicates should be counted as suppressed.');
+        TestCase::assertSame(['/tmp/a.php:12', '/tmp/a.php:13'], $clusters[0]->affectedFiles, 'Affected files should include line-number references.');
 
         $missingPropertyType = self::issue('c', 20, 'Property Foo::$bar has no type specified.', 'missingType.property', 'missingType.property');
         $missingMethodType = self::issue('d', 21, 'Method Foo::run() has parameter $value with no type specified.', 'missingType.parameter', 'missingType.parameter');

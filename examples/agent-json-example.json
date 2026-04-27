@@ -25,7 +25,7 @@
       "repairStrategySummary": "Constrain nullability earlier or widen the target type to accept null.",
       "confidence": 0.7,
       "affectedFiles": [
-        "src/Foo.php"
+        "src/Foo.php:57"
       ],
       "representativeIssues": [],
       "suppressedDuplicateCount": 1
