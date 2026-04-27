@@ -32,15 +32,12 @@ final class PhpstanJsonExportIntegrationTest
 
         /** @var array{
          *   tool: string,
-         *   version: string,
-         *   schema: array{name:string, version:string},
          *   summary: array{totalIssues:int},
          *   clusters: list<array{representativeIssues:list<array{message:string}>}>
          * } $decoded */
         $decoded = json_decode($formatter->formatPhpstanJsonExport(implode("\n", $outputLines)), true, 512, JSON_THROW_ON_ERROR);
 
         TestCase::assertSame('phpstan-agent-format', $decoded['tool'], 'JSON export ingestion should emit the standard tool name.');
-        TestCase::assertSame('2.0.0', $decoded['schema']['version'], 'JSON export ingestion should emit the v2 schema descriptor.');
         TestCase::assertSame(14, $decoded['summary']['totalIssues'], 'JSON export ingestion should preserve all fixture issues.');
 
         $messages = [];

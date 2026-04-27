@@ -1,6 +1,6 @@
 # voku/phpstan-agent-format
 
-`voku/phpstan-agent-format` adds a custom PHPStan formatter named `agent` that emits compact, deterministic v2 repair envelopes for coding agents.
+`voku/phpstan-agent-format` adds a custom PHPStan formatter named `agent` that emits compact, deterministic repair envelopes for coding agents.
 The default output now uses TOON (Token-Oriented Object Notation) for better token efficiency in LLM repair loops.
 
 ## Why
@@ -36,7 +36,7 @@ vendor/bin/phpstan analyse --error-format=agent
 Recommended agent workflow:
 
 1. Read `summary` to understand issue count and clustering.
-2. Tackle one cluster at a time using `kind`, `ruleIdentifier`, and `affectedFiles`.
+2. Tackle one cluster at a time using `kind`, `ruleIdentifier`, and `affectedFiles` (`path:line` references, so one file can appear multiple times when issues land on different lines).
 3. Use each representative issue's `symbolContext` and snippet to locate the fix.
 4. Re-run PHPStan after the change and confirm the cluster disappears.
 
@@ -74,9 +74,9 @@ Run:
 vendor/bin/phpstan analyse --error-format=agent
 ```
 
-The repository CI dogfoods both modes by running PHPStan once with the default formatter, once with `--error-format=agent` on the library itself, and again against committed failing/clean fixture configs that exercise the agent envelope on real PHPStan fixture output.
+The repository CI dogfoods both modes by running PHPStan once with the default formatter, once with `--error-format=agent` on the library itself, explicitly comparing the default JSON report with grouped agent output via `composer phpstan-compare`, verifying reduced-token lossiness boundaries via `composer phpstan-compare-reduced`, and again against committed failing/clean fixture configs that exercise the agent envelope on real PHPStan fixture output.
 The bundled extension also declares the `agentFormat` config schema, so real fixture configs can pass formatter options directly through PHPStan.
-v2 also supports formatting a prior `--error-format=json` PHPStan export through `AgentErrorFormatter::formatPhpstanJsonExport()`.
+The formatter also supports formatting a prior `--error-format=json` PHPStan export through `AgentErrorFormatter::formatPhpstanJsonExport()`.
 
 ## Output modes
 
@@ -92,10 +92,6 @@ Accepted aliases for `outputMode`: `toon`, `json`, `ndjson`, `markdown`, `compac
 
 ```text
 tool: phpstan-agent-format
-version: 2.0.0
-schema:
-  name: phpstan-agent-format
-  version: 2.0.0
 phpstanVersion: 2.1.50
 summary:
   totalIssues: 3
@@ -106,7 +102,7 @@ summary:
     tokenBudget: 12000
     wasReduced: false
 clusters[1]{clusterId,kind,ruleIdentifier,rootCauseSummary,repairStrategySummary,confidence,affectedFiles,representativeIssues,suppressedDuplicateCount}:
-  6fdafecf6214,nullable-propagation,argument.type,Nullable value reaches a non-null expectation.,Constrain nullability earlier or widen the target type to accept null.,0.7,[1]: src/Example.php,[0]:,2
+  6fdafecf6214,nullable-propagation,argument.type,Nullable value reaches a non-null expectation.,Constrain nullability earlier or widen the target type to accept null.,0.7,[1]: src/Example.php:57,[0]:,2
 ```
 
 ## Envelope shape (JSON)
@@ -116,11 +112,6 @@ Representative issues include structured repair hints inside `symbolContext`, in
 ```json
 {
   "tool": "phpstan-agent-format",
-  "version": "2.0.0",
-  "schema": {
-    "name": "phpstan-agent-format",
-    "version": "2.0.0"
-  },
   "phpstanVersion": "2.1.50",
   "summary": {
     "totalIssues": 3,
@@ -140,7 +131,7 @@ Representative issues include structured repair hints inside `symbolContext`, in
       "rootCauseSummary": "Nullable value reaches a non-null expectation.",
       "repairStrategySummary": "Constrain nullability earlier or widen the target type to accept null.",
       "confidence": 0.7,
-      "affectedFiles": ["src/Example.php"],
+      "affectedFiles": ["src/Example.php:57"],
       "representativeIssues": [],
       "suppressedDuplicateCount": 2
     }
@@ -148,7 +139,7 @@ Representative issues include structured repair hints inside `symbolContext`, in
 }
 ```
 
-## Clustering strategy (v2)
+## Clustering strategy
 
 First-pass clustering groups by:
 
@@ -191,9 +182,8 @@ See `/examples/`:
 - `agent-markdown-example.md`
 - `agent-compact-example.txt`
 
-## What's new in v2
+## Current capabilities
 
 - Symbol extraction now prefers structured PHPStan metadata when available and falls back to deterministic message heuristics.
 - Type-origin and propagation traces stay compact while exposing stable hop kinds for downstream consumers.
-- JSON output includes an explicit `schema` descriptor so the envelope can evolve without breaking the existing top-level contract.
 - PHPStan JSON exports can be reformatted through `AgentErrorFormatter::formatPhpstanJsonExport()`.

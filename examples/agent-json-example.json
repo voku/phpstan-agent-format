@@ -1,10 +1,5 @@
 {
   "tool": "phpstan-agent-format",
-  "version": "2.0.0",
-  "schema": {
-    "name": "phpstan-agent-format",
-    "version": "2.0.0"
-  },
   "phpstanVersion": "2.1.50",
   "summary": {
     "totalIssues": 2,
@@ -25,7 +20,7 @@
       "repairStrategySummary": "Constrain nullability earlier or widen the target type to accept null.",
       "confidence": 0.7,
       "affectedFiles": [
-        "src/Foo.php"
+        "src/Foo.php:57"
       ],
       "representativeIssues": [],
       "suppressedDuplicateCount": 1
