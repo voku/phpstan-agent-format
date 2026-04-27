@@ -23,7 +23,7 @@ For humans this is manageable. For agents it is wasteful.
 - duplicate symptoms are suppressed
 - symbol context is preserved
 - context traces stay compact
-- output can be emitted as JSON, NDJSON, Markdown, or compact text
+- output can be emitted as TOON, JSON, NDJSON, Markdown, or compact text
 - token-budget reduction is deterministic when reports get too large
 
 The result is easier to feed into Copilot, Codex, Claude, Cursor, or custom tooling.
@@ -48,7 +48,7 @@ parameters:
         - src
 
     agentFormat:
-        outputMode: json
+        outputMode: toon
 ```
 
 Then run PHPStan with the new formatter:
@@ -57,11 +57,23 @@ Then run PHPStan with the new formatter:
 vendor/bin/phpstan analyse --error-format=agent
 ```
 
-That is enough to get agent-ready output.
+That is enough to get agent-ready output, and the default TOON mode is already optimized for token-efficient repair loops.
 
 ## The easiest workflow with a coding agent
 
-For automation-friendly flows, save JSON:
+For automation-friendly flows, the default TOON output is a good first choice:
+
+```bash
+vendor/bin/phpstan analyse --error-format=agent > phpstan-agent.toon
+```
+
+If a tool specifically expects standard JSON, switch the formatter explicitly:
+
+```neon
+parameters:
+    agentFormat:
+        outputMode: json
+```
 
 ```bash
 vendor/bin/phpstan analyse --error-format=agent > phpstan-agent.json
@@ -108,7 +120,7 @@ The bundled extension already defines defaults and a schema for `agentFormat`, s
 
 Useful options include:
 
-- `outputMode` — chooses the serializer, for example JSON for automation or Markdown for chat-based review.
+- `outputMode` — chooses the serializer, with TOON as the default and JSON/Markdown/NDJSON/compact text available for other workflows.
 - `maxClusters` — limits how many issue groups are kept in the final report.
 - `maxIssuesPerCluster` — controls how many representative issues are shown for each cluster.
 - `snippetLinesBefore` — adds a configurable amount of source context before the reported line.
