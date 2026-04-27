@@ -17,7 +17,7 @@ use Voku\PhpstanAgentFormat\Normalizer\IssueNormalizer;
 final readonly class AgentPresentationBuilder
 {
     public const TOOL_NAME = 'phpstan-agent-format';
-    public const FORMAT_VERSION = '2.0.0';
+
     public function __construct(
         private AgentFormatConfig $config,
         private IssueNormalizer $issueNormalizer,
@@ -60,7 +60,7 @@ final readonly class AgentPresentationBuilder
 
         $presentation = new PresentationResult(
             tool: self::TOOL_NAME,
-            version: self::FORMAT_VERSION,
+            version: '2.0.0',
             phpstanVersion: $this->phpstanVersion(),
             totalIssues: count($issues),
             suppressedDuplicates: $suppressedDuplicates,
