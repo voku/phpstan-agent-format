@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Voku\PhpstanAgentFormat\Tests\Integration;
 
+use HelgeSverre\Toon\Toon;
 use Voku\PhpstanAgentFormat\Tests\Support\TestCase;
 
 final class PhpstanCliConfigIntegrationTest
@@ -58,7 +59,7 @@ final class PhpstanCliConfigIntegrationTest
              *   },
              *   clusters: list<array<mixed>>
              * } $decoded */
-            $decoded = json_decode(implode("\n", $outputLines), true, 512, JSON_THROW_ON_ERROR);
+            $decoded = Toon::decode(implode("\n", $outputLines));
 
             TestCase::assertSame('phpstan-agent-format', $decoded['tool'], 'Clean runs should still emit the standard tool envelope.');
             TestCase::assertSame('2.0.0', $decoded['version'], 'Clean runs should emit the v2 envelope version.');
@@ -119,7 +120,7 @@ final class PhpstanCliConfigIntegrationTest
              *     suppressedDuplicateCount: int
              *   }>
              * } $decoded */
-            $decoded = json_decode(implode("\n", $outputLines), true, 512, JSON_THROW_ON_ERROR);
+            $decoded = Toon::decode(implode("\n", $outputLines));
 
             TestCase::assertSame(2, $decoded['summary']['totalIssues'], 'Duplicate fixture should still count both raw issues.');
             TestCase::assertSame(1, $decoded['summary']['suppressedDuplicates'], 'Token reduction should suppress the extra representative issue.');

@@ -1,6 +1,6 @@
 parameters:
     agentFormat:
-        outputMode: agentJson
+        outputMode: agentToon
         maxClusters: 30
         maxIssuesPerCluster: 3
         snippetLinesBefore: 2

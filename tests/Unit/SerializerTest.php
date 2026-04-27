@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Voku\PhpstanAgentFormat\Tests\Unit;
 
+use HelgeSverre\Toon\Toon;
 use Voku\PhpstanAgentFormat\Dto\IssueCluster;
 use Voku\PhpstanAgentFormat\Dto\PresentationResult;
 use Voku\PhpstanAgentFormat\Dto\SchemaInfo;
@@ -12,6 +13,7 @@ use Voku\PhpstanAgentFormat\Serializer\CompactTextAgentSerializer;
 use Voku\PhpstanAgentFormat\Serializer\JsonAgentSerializer;
 use Voku\PhpstanAgentFormat\Serializer\MarkdownAgentSerializer;
 use Voku\PhpstanAgentFormat\Serializer\NdjsonAgentSerializer;
+use Voku\PhpstanAgentFormat\Serializer\ToonAgentSerializer;
 use Voku\PhpstanAgentFormat\Tests\Support\TestCase;
 
 final class SerializerTest
@@ -34,5 +36,10 @@ final class SerializerTest
 
         $compact = (new CompactTextAgentSerializer())->serialize($presentation);
         TestCase::assertTrue(str_contains($compact, 'phpstan-agent-format'), 'Compact serializer should provide brief summary.');
+
+        /** @var array{tool: string, summary: array{totalIssues: int}} $toon */
+        $toon = Toon::decode((new ToonAgentSerializer())->serialize($presentation));
+        TestCase::assertSame('phpstan-agent-format', $toon['tool'], 'TOON serializer should preserve the tool name.');
+        TestCase::assertSame(2, $toon['summary']['totalIssues'], 'TOON serializer should preserve nested summary values.');
     }
 }

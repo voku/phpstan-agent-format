@@ -1,23 +1,48 @@
 # voku/phpstan-agent-format
 
 `voku/phpstan-agent-format` adds a custom PHPStan formatter named `agent` that emits compact, deterministic v2 repair envelopes for coding agents.
+The default output now uses TOON (Token-Oriented Object Notation) for better token efficiency in LLM repair loops.
 
 ## Why
 
 PHPStan default output is optimized for humans and CI logs.
 This package groups related findings, deduplicates repeated symptoms, and includes compact context traces (not fake runtime stack traces).
 
-## Quick start
-
-### 1. Install
+## Install
 
 ```bash
 composer require --dev voku/phpstan-agent-format
 ```
 
-### 2. Enable the formatter
+This package ships a PHPStan error formatter named `agent`.
+If you include `extension.neon`, `--error-format=agent` emits TOON by default.
 
-Add the bundled extension to your PHPStan config:
+## Quick start for coding agents
+
+Use the formatter as if it were a small repair skill:
+
+> You are fixing PHPStan issues in this repository.
+> Run PHPStan with `--error-format=agent`.
+> Read the TOON envelope.
+> Prioritize `rootCauseSummary`, `repairStrategySummary`, `symbolContext`, snippets, and `contextTrace`.
+> Make the smallest safe code change that removes the reported issue without changing unrelated behavior.
+
+Typical loop:
+
+```bash
+vendor/bin/phpstan analyse --error-format=agent
+```
+
+Recommended agent workflow:
+
+1. Read `summary` to understand issue count and clustering.
+2. Tackle one cluster at a time using `kind`, `ruleIdentifier`, and `affectedFiles`.
+3. Use each representative issue's `symbolContext` and snippet to locate the fix.
+4. Re-run PHPStan after the change and confirm the cluster disappears.
+
+When an agent needs JSON instead of TOON, set `agentFormat.outputMode: json`.
+
+## Configure
 
 ```neon
 includes:
@@ -29,7 +54,7 @@ parameters:
         - src
 
     agentFormat:
-        outputMode: json
+        outputMode: toon
         maxClusters: 30
         maxIssuesPerCluster: 3
         snippetLinesBefore: 2
@@ -43,75 +68,46 @@ parameters:
             - '(?i)secret\s*=\s*.+'
 ```
 
-The bundled extension registers `--error-format=agent`, ships sensible defaults, and declares the `agentFormat` config schema so partial config blocks are valid.
-
-### 3. Run PHPStan with the agent formatter
+Run:
 
 ```bash
 vendor/bin/phpstan analyse --error-format=agent
 ```
 
-That is enough to start producing agent-friendly output.
-
-## Easiest ways to use it
-
-### Save structured output for an agent
-
-JSON is the default mode and works well when your coding agent can read files directly:
-
-```bash
-vendor/bin/phpstan analyse --error-format=agent > phpstan-agent.json
-```
-
-### Save paste-friendly output for chat-based workflows
-
-If you want to paste the result into Copilot, Codex, Claude, Cursor, or another coding assistant, markdown is often the easiest format:
-
-```bash
-vendor/bin/phpstan analyse --error-format=agent > phpstan-agent.md
-```
-
-```neon
-parameters:
-    agentFormat:
-        outputMode: markdown
-```
-
-### Reformat an existing PHPStan JSON export
-
-If you already have `--error-format=json` output, you can reformat it through `AgentErrorFormatter::formatPhpstanJsonExport()`.
-
-## Coding agent starter instructions
-
-Use this as a copy-paste prompt for your coding agent:
-
-```text
-Read the attached phpstan-agent-format report first.
-Treat each cluster as a single underlying problem and fix the root cause instead of patching duplicates.
-Keep changes minimal, preserve existing behavior, and rerun PHPStan after each fix.
-Prefer fixing clusters in the order they appear unless a later cluster is clearly blocked by an earlier one.
-```
-
-Recommended workflow:
-
-1. Run PHPStan with `--error-format=agent`.
-2. Save the output as JSON or Markdown.
-3. Give that file to your coding agent together with the starter instructions above.
-4. Let the agent fix one cluster at a time and rerun PHPStan after each round.
-
 The repository CI dogfoods both modes by running PHPStan once with the default formatter, once with `--error-format=agent` on the library itself, and again against committed failing/clean fixture configs that exercise the agent envelope on real PHPStan fixture output.
+The bundled extension also declares the `agentFormat` config schema, so real fixture configs can pass formatter options directly through PHPStan.
 v2 also supports formatting a prior `--error-format=json` PHPStan export through `AgentErrorFormatter::formatPhpstanJsonExport()`.
 
 ## Output modes
 
-- `agentJson` (default)
+- `agentToon` (default)
+- `agentJson`
 - `agentNdjson`
 - `agentMarkdown`
 - `agentCompact`
 
-Accepted aliases for `outputMode`: `json`, `ndjson`, `markdown`, `compact`.
+Accepted aliases for `outputMode`: `toon`, `json`, `ndjson`, `markdown`, `compact`.
 
-Use `agentJson` for structured automation, `agentMarkdown` for copy/paste workflows, `agentNdjson` for streaming pipelines, and `agentCompact` for terse terminal output.
+## Envelope shape (TOON)
+
+```text
+tool: phpstan-agent-format
+version: 2.0.0
+schema:
+  name: phpstan-agent-format
+  version: 2.0.0
+phpstanVersion: 2.1.50
+summary:
+  totalIssues: 3
+  clusters: 1
+  suppressedDuplicates: 2
+  tokenStats:
+    estimatedTokens: 420
+    tokenBudget: 12000
+    wasReduced: false
+clusters[1]{clusterId,kind,ruleIdentifier,rootCauseSummary,repairStrategySummary,confidence,affectedFiles,representativeIssues,suppressedDuplicateCount}:
+  6fdafecf6214,nullable-propagation,argument.type,Nullable value reaches a non-null expectation.,Constrain nullability earlier or widen the target type to accept null.,0.7,[1]: src/Example.php,[0]:,2
+```
 
 ## Envelope shape (JSON)
 
@@ -190,6 +186,7 @@ Snippets are redacted using configurable regex patterns before serialization.
 See `/examples/`:
 
 - `agent-json-example.json`
+- `agent-toon-example.toon`
 - `agent-ndjson-example.ndjson`
 - `agent-markdown-example.md`
 - `agent-compact-example.txt`

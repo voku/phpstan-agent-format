@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 
-$autoloadFile = $root . '/vendor/autoload.php';
-if (is_file($autoloadFile)) {
-    require_once $autoloadFile;
+$autoloadPath = $root . '/vendor/autoload.php';
+if (is_file($autoloadPath)) {
+    require_once $autoloadPath;
 }
 
 $stubFiles = [];

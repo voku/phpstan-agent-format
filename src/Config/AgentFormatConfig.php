@@ -55,7 +55,7 @@ final readonly class AgentFormatConfig
         }
 
         return new self(
-            outputMode: self::normalizeMode(self::stringValue($raw, 'outputMode', 'agentJson')),
+            outputMode: self::normalizeMode(self::stringValue($raw, 'outputMode', 'agentToon')),
             maxClusters: max(1, self::intValue($raw, 'maxClusters', 30)),
             maxIssuesPerCluster: max(1, self::intValue($raw, 'maxIssuesPerCluster', 3)),
             snippetLinesBefore: max(0, self::intValue($raw, 'snippetLinesBefore', 2)),
@@ -72,11 +72,12 @@ final readonly class AgentFormatConfig
         $normalized = strtolower($mode);
 
         return match ($normalized) {
+            'toon', 'agenttoon' => 'agentToon',
             'json', 'agentjson' => 'agentJson',
             'ndjson', 'agentndjson' => 'agentNdjson',
             'markdown', 'agentmarkdown', 'md' => 'agentMarkdown',
             'compact', 'agentcompact', 'text' => 'agentCompact',
-            default => 'agentJson',
+            default => 'agentToon',
         };
     }
 

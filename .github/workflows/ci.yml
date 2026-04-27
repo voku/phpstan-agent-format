@@ -60,7 +60,7 @@ jobs:
       - name: PHPStan (agent formatter clean fixture dogfood)
         run: |
           vendor/bin/phpstan analyse --configuration tests/Config/phpstan-agent-clean.neon --error-format=agent --no-progress > /tmp/phpstan-agent-clean.json
-          php -r '$payload = json_decode(file_get_contents("/tmp/phpstan-agent-clean.json"), true, 512, JSON_THROW_ON_ERROR); if (($payload["summary"]["totalIssues"] ?? -1) !== 0) { fwrite(STDERR, "Expected zero fixture issues.\n"); exit(1); }'
+          php -r 'require "vendor/autoload.php"; $payload = HelgeSverre\Toon\Toon::decode(file_get_contents("/tmp/phpstan-agent-clean.json")); if (($payload["summary"]["totalIssues"] ?? -1) !== 0) { fwrite(STDERR, "Expected zero fixture issues.\n"); exit(1); }'
 
       - name: PHPStan (agent formatter reduced fixture dogfood)
         run: |

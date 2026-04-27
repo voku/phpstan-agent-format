@@ -18,6 +18,7 @@ use Voku\PhpstanAgentFormat\Serializer\CompactTextAgentSerializer;
 use Voku\PhpstanAgentFormat\Serializer\JsonAgentSerializer;
 use Voku\PhpstanAgentFormat\Serializer\MarkdownAgentSerializer;
 use Voku\PhpstanAgentFormat\Serializer\NdjsonAgentSerializer;
+use Voku\PhpstanAgentFormat\Serializer\ToonAgentSerializer;
 
 final class AgentErrorFormatter implements ErrorFormatter
 {
@@ -65,6 +66,7 @@ final class AgentErrorFormatter implements ErrorFormatter
     private function serializerForMode(string $mode): AgentSerializerInterface
     {
         return match ($mode) {
+            'agentToon' => new ToonAgentSerializer(),
             'agentNdjson' => new NdjsonAgentSerializer(),
             'agentMarkdown' => new MarkdownAgentSerializer(),
             'agentCompact' => new CompactTextAgentSerializer(),
