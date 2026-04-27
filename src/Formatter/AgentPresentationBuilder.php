@@ -10,7 +10,6 @@ use Voku\PhpstanAgentFormat\Budget\TokenBudgetReducer;
 use Voku\PhpstanAgentFormat\Cluster\IssueClusterer;
 use Voku\PhpstanAgentFormat\Config\AgentFormatConfig;
 use Voku\PhpstanAgentFormat\Dto\PresentationResult;
-use Voku\PhpstanAgentFormat\Dto\SchemaInfo;
 use Voku\PhpstanAgentFormat\Dto\TokenStats;
 use Voku\PhpstanAgentFormat\Ingestion\PhpstanJsonExportIngestor;
 use Voku\PhpstanAgentFormat\Normalizer\IssueNormalizer;
@@ -19,8 +18,6 @@ final readonly class AgentPresentationBuilder
 {
     public const TOOL_NAME = 'phpstan-agent-format';
     public const FORMAT_VERSION = '2.0.0';
-    public const SCHEMA_VERSION = '2.0.0';
-
     public function __construct(
         private AgentFormatConfig $config,
         private IssueNormalizer $issueNormalizer,
@@ -64,7 +61,6 @@ final readonly class AgentPresentationBuilder
         $presentation = new PresentationResult(
             tool: self::TOOL_NAME,
             version: self::FORMAT_VERSION,
-            schema: new SchemaInfo(self::TOOL_NAME, self::SCHEMA_VERSION),
             phpstanVersion: $this->phpstanVersion(),
             totalIssues: count($issues),
             suppressedDuplicates: $suppressedDuplicates,

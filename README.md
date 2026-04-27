@@ -1,6 +1,6 @@
 # voku/phpstan-agent-format
 
-`voku/phpstan-agent-format` adds a custom PHPStan formatter named `agent` that emits compact, deterministic v2 repair envelopes for coding agents.
+`voku/phpstan-agent-format` adds a custom PHPStan formatter named `agent` that emits compact, deterministic repair envelopes for coding agents.
 The default output now uses TOON (Token-Oriented Object Notation) for better token efficiency in LLM repair loops.
 
 ## Why
@@ -76,7 +76,7 @@ vendor/bin/phpstan analyse --error-format=agent
 
 The repository CI dogfoods both modes by running PHPStan once with the default formatter, once with `--error-format=agent` on the library itself, and again against committed failing/clean fixture configs that exercise the agent envelope on real PHPStan fixture output.
 The bundled extension also declares the `agentFormat` config schema, so real fixture configs can pass formatter options directly through PHPStan.
-v2 also supports formatting a prior `--error-format=json` PHPStan export through `AgentErrorFormatter::formatPhpstanJsonExport()`.
+The formatter also supports formatting a prior `--error-format=json` PHPStan export through `AgentErrorFormatter::formatPhpstanJsonExport()`.
 
 ## Output modes
 
@@ -93,9 +93,6 @@ Accepted aliases for `outputMode`: `toon`, `json`, `ndjson`, `markdown`, `compac
 ```text
 tool: phpstan-agent-format
 version: 2.0.0
-schema:
-  name: phpstan-agent-format
-  version: 2.0.0
 phpstanVersion: 2.1.50
 summary:
   totalIssues: 3
@@ -117,10 +114,6 @@ Representative issues include structured repair hints inside `symbolContext`, in
 {
   "tool": "phpstan-agent-format",
   "version": "2.0.0",
-  "schema": {
-    "name": "phpstan-agent-format",
-    "version": "2.0.0"
-  },
   "phpstanVersion": "2.1.50",
   "summary": {
     "totalIssues": 3,
@@ -148,7 +141,7 @@ Representative issues include structured repair hints inside `symbolContext`, in
 }
 ```
 
-## Clustering strategy (v2)
+## Clustering strategy
 
 First-pass clustering groups by:
 
@@ -191,9 +184,8 @@ See `/examples/`:
 - `agent-markdown-example.md`
 - `agent-compact-example.txt`
 
-## What's new in v2
+## Current capabilities
 
 - Symbol extraction now prefers structured PHPStan metadata when available and falls back to deterministic message heuristics.
 - Type-origin and propagation traces stay compact while exposing stable hop kinds for downstream consumers.
-- JSON output includes an explicit `schema` descriptor so the envelope can evolve without breaking the existing top-level contract.
 - PHPStan JSON exports can be reformatted through `AgentErrorFormatter::formatPhpstanJsonExport()`.
