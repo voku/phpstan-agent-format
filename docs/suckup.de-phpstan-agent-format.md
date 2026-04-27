@@ -108,15 +108,15 @@ The bundled extension already defines defaults and a schema for `agentFormat`, s
 
 Useful options include:
 
-- `outputMode`
-- `maxClusters`
-- `maxIssuesPerCluster`
-- `snippetLinesBefore`
-- `snippetLinesAfter`
-- `includeDocblock`
-- `includeRelatedDefinition`
-- `tokenBudget`
-- `redactPatterns`
+- `outputMode` — chooses the serializer, for example JSON for automation or Markdown for chat-based review.
+- `maxClusters` — limits how many issue groups are kept in the final report.
+- `maxIssuesPerCluster` — controls how many representative issues are shown for each cluster.
+- `snippetLinesBefore` — adds a configurable amount of source context before the reported line.
+- `snippetLinesAfter` — adds a configurable amount of source context after the reported line.
+- `includeDocblock` — includes nearby docblocks when that extra type/context information is useful.
+- `includeRelatedDefinition` — attaches the related class, method, or function definition when available.
+- `tokenBudget` — caps the report size so large outputs are reduced deterministically instead of growing without bound.
+- `redactPatterns` — removes secrets or sensitive values from snippets with regular-expression based redaction.
 
 That makes it practical both for local development and for CI pipelines.
 
