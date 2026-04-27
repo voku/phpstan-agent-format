@@ -22,7 +22,8 @@
     "test": "php tests/run.php",
     "lint": "php tests/lint.php",
     "phpstan": "phpstan analyse --configuration phpstan.neon.dist",
-    "phpstan-compare": "php tests/phpstan-compare.php"
+    "phpstan-compare": "php tests/phpstan-compare.php",
+    "phpstan-compare-reduced": "php tests/phpstan-compare-reduced.php"
   },
   "extra": {
     "phpstan": {

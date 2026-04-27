@@ -51,6 +51,9 @@ jobs:
       - name: PHPStan (default vs grouped report compare)
         run: composer phpstan-compare
 
+      - name: PHPStan (reduced grouped report compare)
+        run: composer phpstan-compare-reduced
+
       - name: PHPStan (agent formatter fixture dogfood)
         run: |
           set +e
