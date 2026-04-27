@@ -1,32 +1,127 @@
-# Ship PHPStan output that coding agents can actually fix
+# Stop Feeding AI Agents Console Garbage
 
-PHPStan is excellent at finding problems, but its default output is tuned for humans reading a terminal or CI log. Modern coding agents need something different: fewer duplicates, clearer grouping, compact context, and a format that is stable enough to automate.
+## Why do we give AI coding agents unreadable output?
 
-That is why I built [`voku/phpstan-agent-format`](https://github.com/voku/phpstan-agent-format). It adds a custom PHPStan formatter named `agent` that turns raw findings into deterministic repair envelopes for coding agents.
+I think we are mostly lazy.
 
-## The problem
+We already know this problem from code. We name things after database columns, APIs, framework internals, or whatever random structure was nearby when we wrote the first version. Then five years later somebody has to understand `getUser()`, `processData()`, `$array2use`, or some other little crime scene. The existing SUCKUP articles already say the important part: code should describe the current situation, not the accidental implementation detail.
 
-When you hand regular PHPStan output to a coding agent, a few things usually happen:
+And now we do the same thing with tools.
 
-- repeated errors get fixed one by one instead of at the root cause
-- important context is spread across many lines
-- the output is noisy for chat-based workflows
-- the agent spends tokens on formatting noise instead of on the actual repair
+We take PHPStan output, dump it into CI, copy it into an AI prompt, and then act surprised when the agent starts fixing symptoms instead of the problem.
 
-For humans this is manageable. For agents it is wasteful.
+**bad:**
 
-## What this package changes
+```bash
+vendor/bin/phpstan analyse
+```
 
-`phpstan-agent-format` keeps PHPStan as the source of truth, but reshapes the output for repair loops:
+Then copy 500 lines of terminal output into an AI tool and ask:
 
-- related issues are clustered together
-- duplicate symptoms are suppressed
-- symbol context is preserved
-- context traces stay compact
-- output can be emitted as TOON, JSON, NDJSON, Markdown, or compact text
-- token-budget reduction is deterministic when reports get too large
+```text
+please fix
+```
 
-The result is easier to feed into Copilot, Codex, Claude, Cursor, or custom tooling.
+Congratulations. You built a slot machine.
+
+**better:**
+
+```bash
+vendor/bin/phpstan analyse --error-format=agent
+```
+
+Then give the agent structured repair information:
+
+```text
+Read the summary.
+Pick one cluster.
+Understand the root cause.
+Make the smallest safe change.
+Run PHPStan again.
+```
+
+This is not magic. This is basic tooling hygiene.
+
+---
+
+Static analysis is already useful because it prevents stupid bugs before runtime. Use types. Use PHPStan. Use automation. Do not wait until production explains your mistake to the customer. This has been the point for years: prevent bugs, automate refactoring, use constants/classes/properties instead of random strings, and stop making the code harder to analyze than necessary.
+
+But static analysis output for humans is not automatically good input for agents.
+
+Humans can read noisy CI logs and guess the hidden connection between ten errors. We can say: "Ah, this is probably one nullable value leaking through the service layer." Then we fix the source.
+
+Agents are not there yet unless we give them better input.
+
+Without structure, the agent sees this:
+
+```
+error
+error
+error
+error
+error
+```
+
+And then it does this:
+
+```
+change
+change
+change
+change
+break
+```
+
+That is not refactoring. That is automated panic.
+
+---
+
+[`voku/phpstan-agent-format`](https://github.com/voku/phpstan-agent-format) fixes exactly this boring but important problem. It adds a PHPStan formatter called `agent`, which emits compact deterministic repair envelopes for coding agents. The default output uses TOON, so the agent does not waste half its context window reading decorative JSON brackets like it is paid by the token.
+
+It groups related findings.
+
+It deduplicates repeated symptoms.
+
+It includes compact context traces.
+
+It gives the agent something closer to a repair plan instead of a wall of terminal sadness.
+
+**bad:**
+
+```
+Line 42: Parameter #1 expects string, string|null given.
+Line 84: Parameter #1 expects string, string|null given.
+Line 129: Parameter #1 expects string, string|null given.
+```
+
+Agent reaction: *Make everything nullable?*
+
+No. Bad agent. Sit.
+
+**better:**
+
+```
+kind: nullable-propagation
+rootCauseSummary: Nullable value reaches a non-null expectation.
+repairStrategySummary: Constrain nullability earlier or widen the target type if the domain allows it.
+affectedFiles: src/UserMailer.php
+```
+
+Now we can work.
+
+---
+
+And yes, this is still your job as a developer. The agent should not "decide architecture". The agent should repair one cluster, with one small change, and then PHPStan should confirm that the problem disappeared.
+
+Same rule as with legacy code:
+
+First think.
+
+Then change.
+
+Then check.
+
+Not the other way around.
 
 ## Five-minute setup
 
@@ -57,9 +152,9 @@ Then run PHPStan with the new formatter:
 vendor/bin/phpstan analyse --error-format=agent
 ```
 
-That is enough to get agent-ready output, and the default TOON mode is already optimized for token-efficient repair loops.
+That is enough to get agent-ready output. The default TOON mode is already optimized for token-efficient repair loops.
 
-## The easiest workflow with a coding agent
+## Workflow
 
 For automation-friendly flows, the default TOON output is a good first choice:
 
@@ -101,19 +196,6 @@ Keep changes minimal and preserve behavior.
 Rerun PHPStan after each fix.
 ```
 
-This is simple, but it changes the quality of the repair loop a lot.
-
-## Why the formatter matters
-
-The formatter is not just a different skin on top of PHPStan output. It adds structure that helps an agent make better decisions:
-
-- cluster identifiers keep related issues together
-- repair summaries explain the likely direction of the fix
-- affected files stay visible without flooding the report
-- snippets and related definitions add context without pretending to be a runtime trace
-
-If the report gets too large, the formatter reduces detail in a predictable order instead of failing into random truncation.
-
 ## Good defaults, but still configurable
 
 The bundled extension already defines defaults and a schema for `agentFormat`, so you can start with a minimal config and tune later.
@@ -130,18 +212,8 @@ Useful options include:
 - `tokenBudget` — caps the report size so large outputs are reduced deterministically instead of growing without bound.
 - `redactPatterns` — removes secrets or sensitive values from snippets with regular-expression based redaction.
 
-That makes it practical both for local development and for CI pipelines.
-
 ## Also useful for existing JSON exports
 
 If you already produce `phpstan --error-format=json`, the package can also reformat that payload through `AgentErrorFormatter::formatPhpstanJsonExport()`.
 
 So you do not need to rebuild your whole workflow just to experiment with agent-friendly output.
-
-## Closing thought
-
-Static analysis is already one of the best inputs we can give a coding agent. The missing piece is often the presentation layer.
-
-`voku/phpstan-agent-format` keeps PHPStan’s analysis intact, but packages it in a form that is easier to automate, easier to paste into chat tools, and easier for an agent to fix correctly.
-
-If you want to try it, start with the README, switch PHPStan to `--error-format=agent`, and run one repair loop against a real project. The difference becomes obvious very quickly.
