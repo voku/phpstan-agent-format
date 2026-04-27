@@ -45,6 +45,8 @@ $tests = [
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\ClustererTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\IssueNormalizerTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\TokenBudgetReducerTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\AgentErrorFormatterTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\PhpstanJsonExportIngestorTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\SerializerTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\FormatterIntegrationTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliBlindSpotMatrixTest', 'run'],
@@ -52,6 +54,7 @@ $tests = [
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliIntegrationTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliFixtureMatrixTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanJsonExportIntegrationTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanReportParityIntegrationTest', 'run'],
 ];
 
 $failures = [];
