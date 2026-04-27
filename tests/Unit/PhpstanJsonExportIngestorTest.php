@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Voku\PhpstanAgentFormat\Tests\Unit;
 
 use InvalidArgumentException;
+use Voku\PhpstanAgentFormat\Ingestion\ImportedPhpstanError;
 use Voku\PhpstanAgentFormat\Ingestion\PhpstanJsonExportIngestor;
 use Voku\PhpstanAgentFormat\Tests\Support\TestCase;
 
@@ -60,6 +61,7 @@ final class PhpstanJsonExportIngestorTest
         TestCase::assertSame(1, count($decodedFromString['fileSpecificErrors']), 'String payloads should decode to the same valid file-specific errors.');
         TestCase::assertSame(['Top level error'], $decodedFromString['notFileSpecificErrors'], 'String payloads should decode to the same top-level errors.');
 
+        /** @var ImportedPhpstanError $error */
         $error = $decodedFromArray['fileSpecificErrors'][0];
         TestCase::assertSame('/tmp/a.php', $error->getFile(), 'Imported PHPStan errors should preserve file paths.');
         TestCase::assertSame(1, $error->getLine(), 'Imported PHPStan errors should normalize line numbers to be at least one.');

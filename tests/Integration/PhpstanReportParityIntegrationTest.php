@@ -120,8 +120,8 @@ final class PhpstanReportParityIntegrationTest
             foreach ($entry['messages'] as $message) {
                 $issues[$message['message']] = [
                     'file' => $file,
-                    'line' => isset($message['line']) && is_int($message['line']) ? $message['line'] : 1,
-                    'ruleIdentifier' => isset($message['identifier']) && is_string($message['identifier']) && $message['identifier'] !== '' ? $message['identifier'] : null,
+                    'line' => $message['line'] ?? 1,
+                    'ruleIdentifier' => ($message['identifier'] ?? '') !== '' ? $message['identifier'] : null,
                 ];
             }
         }
