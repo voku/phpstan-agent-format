@@ -47,13 +47,11 @@ final class PhpstanCliConfigIntegrationTest
 
             TestCase::assertSame(0, $exitCode, 'Clean fixtures should keep the CLI exit code at zero.');
 
-            /** @var array{
-             *   tool: string,
-             *   version: string,
-             *   schema: array{version:string},
-             *   summary: array{
-             *     totalIssues: int,
-             *     clusters: int,
+             /** @var array{
+              *   tool: string,
+              *   summary: array{
+              *     totalIssues: int,
+              *     clusters: int,
              *     suppressedDuplicates: int,
              *     tokenStats: array{estimatedTokens: int, tokenBudget: int, wasReduced: bool}
              *   },
@@ -62,8 +60,6 @@ final class PhpstanCliConfigIntegrationTest
             $decoded = Toon::decode(implode("\n", $outputLines));
 
             TestCase::assertSame('phpstan-agent-format', $decoded['tool'], 'Clean runs should still emit the standard tool envelope.');
-            TestCase::assertSame('2.0.0', $decoded['version'], 'Clean runs should emit the v2 envelope version.');
-            TestCase::assertSame('2.0.0', $decoded['schema']['version'], 'Clean runs should surface the schema version.');
             TestCase::assertSame(0, $decoded['summary']['totalIssues'], 'Clean runs should report zero issues.');
             TestCase::assertSame(0, $decoded['summary']['clusters'], 'Clean runs should report zero clusters.');
             TestCase::assertSame(0, count($decoded['clusters']), 'Clean runs should emit an empty cluster list.');

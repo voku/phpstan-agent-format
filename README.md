@@ -249,10 +249,6 @@ Rerun PHPStan after each fix.
 
 ```text
 tool: phpstan-agent-format
-version: 2.0.0
-schema:
-  name: phpstan-agent-format
-  version: 2.0.0
 phpstanVersion: 2.1.50
 summary:
   totalIssues: 3
@@ -263,7 +259,7 @@ summary:
     tokenBudget: 12000
     wasReduced: false
 clusters[1]{clusterId,kind,ruleIdentifier,rootCauseSummary,repairStrategySummary,confidence,affectedFiles,representativeIssues,suppressedDuplicateCount}:
-  6fdafecf6214,nullable-propagation,argument.type,Nullable value reaches a non-null expectation.,Constrain nullability earlier or widen the target type to accept null.,0.7,[3]: src/UserMailer.php src/UserRepository.php,[0]:,2
+  6fdafecf6214,nullable-propagation,argument.type,Nullable value reaches a non-null expectation.,Constrain nullability earlier or widen the target type to accept null.,0.7,[3]: src/UserMailer.php:42 src/UserMailer.php:84 src/UserRepository.php:129,[0]:,2
 ```
 
 ## 📐 Envelope shape (JSON)
@@ -273,11 +269,6 @@ Representative issues include structured repair hints inside `symbolContext`, in
 ```json
 {
   "tool": "phpstan-agent-format",
-  "version": "2.0.0",
-  "schema": {
-    "name": "phpstan-agent-format",
-    "version": "2.0.0"
-  },
   "phpstanVersion": "2.1.50",
   "summary": {
     "totalIssues": 3,
@@ -297,7 +288,7 @@ Representative issues include structured repair hints inside `symbolContext`, in
       "rootCauseSummary": "Nullable value reaches a non-null expectation.",
       "repairStrategySummary": "Constrain nullability earlier or widen the target type to accept null.",
       "confidence": 0.7,
-      "affectedFiles": ["src/UserMailer.php", "src/UserRepository.php"],
+      "affectedFiles": ["src/UserMailer.php:42", "src/UserMailer.php:84", "src/UserRepository.php:129"],
       "representativeIssues": [
         {
           "id": "a1b2c3d4",
@@ -321,7 +312,7 @@ Representative issues include structured repair hints inside `symbolContext`, in
 
 ---
 
-## 🧩 Clustering strategy (v2)
+## 🧩 Clustering strategy
 
 First-pass clustering groups by:
 
@@ -389,12 +380,3 @@ $result = AgentErrorFormatter::formatPhpstanJsonExport($jsonString, $config);
 ```
 
 The repository CI dogfoods both modes: PHPStan runs once with the default formatter, once with `--error-format=agent`, and again against committed fixture configs that exercise the agent envelope on real output.
-
----
-
-## 🆕 What's new in v2
-
-- Symbol extraction now prefers structured PHPStan metadata and falls back to deterministic message heuristics.
-- Type-origin and propagation traces stay compact while exposing stable hop kinds for downstream consumers.
-- JSON output includes an explicit `schema` descriptor so the envelope can evolve without breaking the existing top-level contract.
-- PHPStan JSON exports can be reformatted through `AgentErrorFormatter::formatPhpstanJsonExport()`.

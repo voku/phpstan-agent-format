@@ -62,7 +62,10 @@ final readonly class IssueClusterer
             $kind = $this->detectKind($group[0]);
             $rep = array_slice($group, 0, $this->config->maxIssuesPerCluster);
             $suppressed = max(0, count($group) - count($rep));
-            $affectedFiles = array_values(array_unique(array_map(static fn (AgentIssue $issue): string => $issue->location->file, $group)));
+            $affectedFiles = array_values(array_unique(array_map(
+                static fn (AgentIssue $issue): string => $issue->location->file . ':' . $issue->location->line,
+                $group
+            )));
             sort($affectedFiles);
 
             $clusters[] = new IssueCluster(
