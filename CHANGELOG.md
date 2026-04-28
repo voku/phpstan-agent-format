@@ -2,21 +2,34 @@
 
 All notable changes to `voku/phpstan-agent-format` will be documented in this file.
 
-## [Upcoming]
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] - 2026-04-28
 
 ### Added
 
-- Initial release of `voku/phpstan-agent-format` with a custom PHPStan `agent` formatter that groups related findings into compact repair envelopes for coding agents.
-- Multiple output modes for agent consumers, including TOON, JSON, NDJSON, Markdown, and compact text, with formatter defaults exposed through `extension.neon`.
-- Structured v2 envelope metadata, including explicit schema information, representative issue context, symbol hints, snippets, and context traces.
-- Support for reformatting prior PHPStan `--error-format=json` exports through `AgentErrorFormatter::formatPhpstanJsonExport()`.
-
-### Changed
-
-- Default formatter output now uses TOON for better token efficiency in coding-agent repair loops.
-- Clustering and issue normalization now prefer richer PHPStan identifier, symbol, and type-origin context to produce more stable repair summaries.
-
-### Fixed
-
-- Generic type detection now handles identifiers that include digits.
-- Metadata normalization and sparse issue enrichment now preserve nested metadata while recovering symbol context more reliably.
+- Initial release of `voku/phpstan-agent-format`.
+- Added a custom PHPStan error formatter named `agent`.
+- Added compact, deterministic repair envelopes for coding agents.
+- Added clustering for related PHPStan findings to reduce repeated symptom-fixing.
+- Added structured repair metadata, including:
+    - schema information
+    - representative issue context
+    - symbol hints
+    - source snippets
+    - context traces
+    - root-cause summaries
+    - repair-strategy summaries
+- Added multiple output modes for different agent and CI workflows:
+    - TOON
+    - JSON
+    - NDJSON
+    - Markdown
+    - compact text
+- Added default formatter configuration through `extension.neon`.
+- Added support for reformatting existing PHPStan `--error-format=json` exports through
+  `AgentErrorFormatter::formatPhpstanJsonExport()`.
+- Added richer issue normalization based on PHPStan identifiers, symbol context, and type-origin hints.
+- Added metadata normalization for sparse PHPStan issues while preserving nested metadata.
+- Added support for detecting generic type identifiers that contain digits.

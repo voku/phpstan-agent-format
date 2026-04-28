@@ -1,2 +1,14 @@
-/vendor/
+/nbproject/private/
+
+.idea
+
+# composer
+vendor
+composer.lock
+
+# php (phpunit)
+.phpunit.result.cache
 .phpunit.cache/
+
+# phpcs fixer
+.php_cs.cache
