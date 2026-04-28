@@ -13,6 +13,7 @@ final class PhpstanCliConfigIntegrationTest
     {
         self::assertCleanRunWithEmptyConfigBlock();
         self::assertPartialConfigTriggersReduction();
+        self::assertDynamicConstantNamesDoNotBreakFormatter();
     }
 
     private static function assertCleanRunWithEmptyConfigBlock(): void
@@ -125,6 +126,53 @@ final class PhpstanCliConfigIntegrationTest
             TestCase::assertSame(1, count($decoded['clusters']), 'Duplicate fixture should collapse to a single cluster.');
             TestCase::assertSame(1, count($decoded['clusters'][0]['representativeIssues']), 'Reduced output should keep only one representative issue.');
             TestCase::assertSame(1, $decoded['clusters'][0]['suppressedDuplicateCount'], 'Reduced output should record the suppressed duplicate.');
+        } finally {
+            if (is_file($configPath)) {
+                unlink($configPath);
+            }
+        }
+    }
+
+    private static function assertDynamicConstantNamesDoNotBreakFormatter(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $configPath = sys_get_temp_dir() . '/phpstan-agent-format-unrelated-' . sha1((string) microtime(true)) . '.neon';
+
+        $config = implode("\n", [
+            'includes:',
+            '    - ' . $root . '/extension.neon',
+            '',
+            'parameters:',
+            '    level: max',
+            '    paths:',
+            '        - ' . $root . '/tests/Fixture/CleanRun.php',
+            '    dynamicConstantNames:',
+            '        - MissingExtensionProbe::VALUE',
+            '    agentFormat: {}',
+            '',
+        ]);
+
+        file_put_contents($configPath, $config);
+
+        try {
+            $outputLines = [];
+            $exitCode = 0;
+
+            exec(sprintf(
+                '%s %s analyse --configuration %s --error-format=agent --no-progress 2>&1',
+                escapeshellarg(PHP_BINARY),
+                escapeshellarg($root . '/vendor/bin/phpstan'),
+                escapeshellarg($configPath),
+            ), $outputLines, $exitCode);
+
+            TestCase::assertSame(0, $exitCode, 'Dynamic constant names must not break the agent formatter.');
+
+            /** @var array{
+             *   summary: array{totalIssues: int}
+             * } $decoded */
+            $decoded = Toon::decode(implode("\n", $outputLines));
+
+            TestCase::assertSame(0, $decoded['summary']['totalIssues'], 'Dynamic constant names must not change clean-run results.');
         } finally {
             if (is_file($configPath)) {
                 unlink($configPath);

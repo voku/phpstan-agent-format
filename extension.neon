@@ -14,7 +14,7 @@ services:
     errorFormatter.agent:
         class: Voku\PhpstanAgentFormat\Formatter\AgentErrorFormatter
         arguments:
-            parameters: %parameters%
+            parameters: %agentFormat%
         tags:
             - phpstan.errorFormatter
 
