@@ -90,9 +90,8 @@ final class PhpstanReportParity
         $exitCode = 0;
 
         exec(sprintf(
-            '%s %s analyse --configuration %s --error-format=%s --no-progress 2>&1',
-            escapeshellarg(PHP_BINARY),
-            escapeshellarg($root . '/vendor/bin/phpstan'),
+            '%s analyse --configuration %s --error-format=%s --no-progress 2>&1',
+            TestCase::phpstanCommand($root),
             escapeshellarg($configPath),
             escapeshellarg($errorFormat),
         ), $outputLines, $exitCode);

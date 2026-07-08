@@ -19,6 +19,10 @@ final readonly class AgentIssue
         public ContextTrace $contextTrace,
         public FixHint $fixHint,
         public array $secondaryLocations = [],
+        public bool $exposeDocblock = false,
+        public ?string $docblock = null,
+        public bool $exposeRelatedDefinition = false,
+        public ?RelatedDefinition $relatedDefinition = null,
     ) {
     }
 
@@ -43,7 +47,7 @@ final readonly class AgentIssue
             $secondaryLocations[] = $location->toArray();
         }
 
-        return [
+        $result = [
             'id' => $this->id,
             'message' => $this->message,
             'ruleIdentifier' => $this->ruleIdentifier,
@@ -55,6 +59,15 @@ final readonly class AgentIssue
             'repairStrategySummary' => $this->fixHint->repairStrategySummary,
             'secondaryLocations' => $secondaryLocations,
         ];
+
+        if ($this->exposeDocblock) {
+            $result['docblock'] = $this->docblock;
+        }
+        if ($this->exposeRelatedDefinition) {
+            $result['relatedDefinition'] = $this->relatedDefinition?->toArray();
+        }
+
+        return $result;
     }
 
     /**
@@ -72,6 +85,29 @@ final readonly class AgentIssue
             contextTrace: $this->contextTrace,
             fixHint: $this->fixHint,
             secondaryLocations: $secondaryLocations,
+            exposeDocblock: $this->exposeDocblock,
+            docblock: $this->docblock,
+            exposeRelatedDefinition: $this->exposeRelatedDefinition,
+            relatedDefinition: $this->relatedDefinition,
+        );
+    }
+
+    public function withoutExtractedContext(): self
+    {
+        return new self(
+            id: $this->id,
+            message: $this->message,
+            ruleIdentifier: $this->ruleIdentifier,
+            location: $this->location,
+            symbolContext: $this->symbolContext,
+            snippet: $this->snippet,
+            contextTrace: $this->contextTrace,
+            fixHint: $this->fixHint,
+            secondaryLocations: $this->secondaryLocations,
+            exposeDocblock: $this->exposeDocblock,
+            docblock: null,
+            exposeRelatedDefinition: $this->exposeRelatedDefinition,
+            relatedDefinition: null,
         );
     }
 
@@ -87,6 +123,10 @@ final readonly class AgentIssue
             contextTrace: $this->contextTrace,
             fixHint: $this->fixHint,
             secondaryLocations: $this->secondaryLocations,
+            exposeDocblock: $this->exposeDocblock,
+            docblock: $this->docblock,
+            exposeRelatedDefinition: $this->exposeRelatedDefinition,
+            relatedDefinition: $this->relatedDefinition,
         );
     }
 }

@@ -16,6 +16,7 @@ final class AgentErrorFormatterTest
     {
         self::assertCleanRunsReturnZeroExitCode();
         self::assertJsonExportArrayPayloadSupportsAllOutputModes();
+        self::assertDocblockAndRelatedDefinitionOptions();
     }
 
     private static function assertCleanRunsReturnZeroExitCode(): void
@@ -105,4 +106,112 @@ final class AgentErrorFormatterTest
         TestCase::assertTrue(str_contains($compactOutput, 'phpstan-agent-format totalIssues=1 clusters=1 suppressed=0'), 'Compact mode should emit the summary line.');
         TestCase::assertTrue(str_contains($compactOutput, 'rule=method.notFound'), 'Compact mode should include cluster rule identifiers.');
     }
+    private static function assertDocblockAndRelatedDefinitionOptions(): void
+    {
+        $fixture = sys_get_temp_dir() . '/phpstan-agent-format-context-fixture.php';
+        file_put_contents($fixture, <<<'PHP'
+<?php
+
+/**
+ * Sends an email to a verified recipient.
+ * api_key = super-secret
+ */
+final class ContextFixtureMailer
+{
+    /**
+     * The default verified recipient.
+     * secret = property-secret
+     */
+    public string $email = 'secret = property-secret';
+
+    /**
+     * Sends a message body.
+     * password = method-secret
+     */
+    public function send(string $email): void
+    {
+    }
+}
+PHP);
+
+        $payload = [
+            'files' => [
+                $fixture => [
+                    'messages' => [
+                        [
+                            'message' => 'Parameter #1 $email of method ContextFixtureMailer::send() expects string, string|null given.',
+                            'line' => 18,
+                            'identifier' => 'argument.type',
+                            'metadata' => [
+                                'className' => 'ContextFixtureMailer',
+                                'methodName' => 'send',
+                                'parameterName' => 'email',
+                            ],
+                        ],
+                        [
+                            'message' => 'Property ContextFixtureMailer::$email type has no value type specified in iterable type array.',
+                            'line' => 12,
+                            'identifier' => 'missingType.iterableValue',
+                            'metadata' => [
+                                'className' => 'ContextFixtureMailer',
+                                'propertyName' => 'email',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'errors' => [],
+        ];
+
+        $disabled = new AgentErrorFormatter(['agentFormat' => ['outputMode' => 'json', 'includeDocblock' => false, 'includeRelatedDefinition' => false]]);
+        /** @var array{clusters:list<array{representativeIssues:list<array<string,mixed>>}>} $disabledDecoded */
+        $disabledDecoded = json_decode($disabled->formatPhpstanJsonExport($payload), true, 512, JSON_THROW_ON_ERROR);
+        $disabledIssue = $disabledDecoded['clusters'][0]['representativeIssues'][0];
+        TestCase::assertTrue(!array_key_exists('docblock', $disabledIssue), 'Disabled docblock option should preserve the existing issue schema.');
+        TestCase::assertTrue(!array_key_exists('relatedDefinition', $disabledIssue), 'Disabled related definition option should preserve the existing issue schema.');
+
+        $enabled = new AgentErrorFormatter([
+            'agentFormat' => [
+                'outputMode' => 'json',
+                'includeDocblock' => true,
+                'includeRelatedDefinition' => true,
+                'redactPatterns' => ['(?i)api[_-]?key\s*=\s*.+', '(?i)secret\s*=\s*.+', '(?i)password\s*=\s*.+'],
+            ],
+        ]);
+        /** @var array{clusters:list<array{representativeIssues:list<array<string,mixed>>}>} $enabledDecoded */
+        $enabledDecoded = json_decode($enabled->formatPhpstanJsonExport($payload), true, 512, JSON_THROW_ON_ERROR);
+        $issues = [];
+        foreach ($enabledDecoded['clusters'] as $cluster) {
+            foreach ($cluster['representativeIssues'] as $issue) {
+                $issues[] = $issue;
+            }
+        }
+
+        TestCase::assertSame(2, count($issues), 'Context options should keep both representative issues valid.');
+        $joined = json_encode($issues, JSON_THROW_ON_ERROR);
+        TestCase::assertTrue(str_contains($joined, 'Sends a message body.'), 'Method issues should include the nearest method docblock.');
+        TestCase::assertTrue(str_contains($joined, 'The default verified recipient.'), 'Property issues should include the nearest property docblock.');
+        TestCase::assertTrue(str_contains($joined, '[REDACTED]'), 'Docblocks and related snippets should use configured redaction patterns.');
+        TestCase::assertTrue(!str_contains($joined, 'method-secret'), 'Redaction should remove method docblock secrets.');
+        TestCase::assertTrue(!str_contains($joined, 'property-secret'), 'Redaction should remove property docblock secrets.');
+
+        $methodDefinitionFound = false;
+        $propertyDefinitionFound = false;
+        foreach ($issues as $issue) {
+            /** @var array{kind:string,snippet:list<string>}|null $definition */
+            $definition = $issue['relatedDefinition'];
+            if ($definition !== null && $definition['kind'] === 'method' && str_contains($definition['snippet'][0], 'public function send(string $email): void')) {
+                $methodDefinitionFound = true;
+            }
+            if ($definition !== null && $definition['kind'] === 'property' && str_contains($definition['snippet'][0], 'public string $email')) {
+                $propertyDefinitionFound = true;
+            }
+        }
+
+        TestCase::assertTrue($methodDefinitionFound, 'Related definitions should include compact method signatures.');
+        TestCase::assertTrue($propertyDefinitionFound, 'Related definitions should include compact property declarations.');
+
+        @unlink($fixture);
+    }
+
 }

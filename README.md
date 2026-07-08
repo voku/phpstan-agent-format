@@ -204,10 +204,44 @@ vendor/bin/phpstan analyse --error-format=agent
 | `maxIssuesPerCluster` | `3` | Representative issues shown per cluster |
 | `snippetLinesBefore` | `2` | Source context lines before the reported line |
 | `snippetLinesAfter` | `3` | Source context lines after the reported line |
-| `includeDocblock` | `false` | Include nearby docblocks for extra type context |
-| `includeRelatedDefinition` | `true` | Attach related class/method/function definition |
+| `includeDocblock` | `false` | Includes the nearest relevant PHPDoc block for the reported symbol when available. |
+| `includeRelatedDefinition` | `true` | Includes a compact declaration snippet for the related class, method, function, property, or constant when it can be resolved safely. |
 | `tokenBudget` | `12000` | Cap report size; reduction is deterministic when exceeded |
 | `redactPatterns` | `[]` | Regex patterns to redact secrets from snippets |
+
+
+### Context-rich representative issue example
+
+When `includeDocblock` and `includeRelatedDefinition` are enabled, representative issues can include compact symbol context without expanding entire source files:
+
+```json
+{
+  "message": "Parameter #1 $email expects string, string|null given.",
+  "location": {
+    "file": "src/UserMailer.php",
+    "line": 42
+  },
+  "symbolContext": {
+    "className": "UserMailer",
+    "methodName": "send",
+    "parameterName": "email",
+    "expectedType": "string",
+    "inferredType": "string|null"
+  },
+  "docblock": "/** Sends an email to a verified recipient. */",
+  "relatedDefinition": {
+    "file": "src/UserMailer.php",
+    "line": 17,
+    "symbol": "UserMailer::send",
+    "kind": "method",
+    "snippet": [
+      "public function send(string $email): void"
+    ]
+  }
+}
+```
+
+If a docblock or related declaration cannot be resolved conservatively, the corresponding enabled field is emitted as `null`. Both fields respect `redactPatterns` and the token-budget reducer may remove them before shrinking root-cause and repair-strategy summaries.
 
 ---
 

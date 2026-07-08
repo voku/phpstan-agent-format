@@ -25,8 +25,17 @@ final readonly class TokenBudgetReducer
             return $presentation->withClusters($clusters, $presentation->suppressedDuplicates, new TokenStats($estimated, $this->config->tokenBudget, false));
         }
 
-        // 1. remove verbose prose
-        $clusters = array_map(static fn (IssueCluster $cluster): IssueCluster => new IssueCluster(
+        // 1. remove optional extracted context before shrinking core repair summaries.
+        $clusters = array_map(static fn (IssueCluster $cluster): IssueCluster => $cluster->withRepresentativeIssues(
+            array_map(static fn ($issue) => $issue->withoutExtractedContext(), $cluster->representativeIssues),
+            $cluster->suppressedDuplicateCount,
+        ), $clusters);
+
+        $estimated = $this->estimate($clusters);
+
+        // 2. remove verbose secondary locations
+        if ($estimated > $this->config->tokenBudget) {
+            $clusters = array_map(static fn (IssueCluster $cluster): IssueCluster => new IssueCluster(
             clusterId: $cluster->clusterId,
             kind: $cluster->kind,
             ruleIdentifier: $cluster->ruleIdentifier,
@@ -37,10 +46,11 @@ final readonly class TokenBudgetReducer
             representativeIssues: array_map(static fn ($issue) => $issue->withSecondaryLocations([]), $cluster->representativeIssues),
             suppressedDuplicateCount: $cluster->suppressedDuplicateCount,
         ), $clusters);
+        }
 
         $estimated = $this->estimate($clusters);
 
-        // 2. shrink snippets
+        // 3. shrink snippets
         if ($estimated > $this->config->tokenBudget) {
             $clusters = array_map(function (IssueCluster $cluster): IssueCluster {
                 $issues = [];
@@ -54,7 +64,7 @@ final readonly class TokenBudgetReducer
             $estimated = $this->estimate($clusters);
         }
 
-        // 3/4. reduce representative issue count as needed.
+        // 4. reduce representative issue count as needed.
         if ($estimated > $this->config->tokenBudget) {
             $clusters = array_map(function (IssueCluster $cluster): IssueCluster {
                 if (count($cluster->representativeIssues) <= 1) {

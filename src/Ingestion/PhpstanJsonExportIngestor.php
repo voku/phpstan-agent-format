@@ -16,7 +16,7 @@ final class PhpstanJsonExportIngestor
     public function ingest(array|string $payload): array
     {
         $decoded = is_string($payload)
-            ? json_decode($payload, true, 512, JSON_THROW_ON_ERROR)
+            ? json_decode($this->normalizeJsonPayload($payload), true, 512, JSON_THROW_ON_ERROR)
             : $payload;
 
         if (!is_array($decoded)) {
@@ -79,5 +79,20 @@ final class PhpstanJsonExportIngestor
             'fileSpecificErrors' => $fileSpecificErrors,
             'notFileSpecificErrors' => $notFileSpecificErrors,
         ];
+    }
+
+    private function normalizeJsonPayload(string $payload): string
+    {
+        $trimmed = ltrim($payload);
+        if (str_starts_with($trimmed, '{')) {
+            return $trimmed;
+        }
+
+        $jsonStart = strpos($trimmed, '{');
+        if ($jsonStart === false) {
+            return $trimmed;
+        }
+
+        return substr($trimmed, $jsonStart);
     }
 }
