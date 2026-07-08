@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace Voku\PhpstanAgentFormat\Context;
 
 use RuntimeException;
-use Voku\PhpstanAgentFormat\Config\AgentFormatConfig;
 use Voku\PhpstanAgentFormat\Dto\RelatedDefinition;
 use Voku\PhpstanAgentFormat\Dto\SymbolContext;
 
 final readonly class RelatedDefinitionExtractor
 {
     public function __construct(
-        private AgentFormatConfig $config,
         private PhpSymbolScanner $symbolScanner,
+        private Redactor $redactor,
     ) {
     }
 
@@ -38,7 +37,7 @@ final readonly class RelatedDefinitionExtractor
             line: $declaration['line'],
             symbol: $declaration['symbol'],
             kind: $declaration['kind'],
-            snippet: [$this->redact($this->compactDeclaration($lines, $declaration['line']))],
+            snippet: [$this->redactor->redact($this->compactDeclaration($lines, $declaration['line']))],
         );
     }
 
@@ -60,23 +59,5 @@ final readonly class RelatedDefinitionExtractor
         }
 
         return trim(implode(' ', $parts));
-    }
-
-    private function redact(string $value): string
-    {
-        $result = $value;
-        foreach ($this->config->redactPatterns as $pattern) {
-            $replaced = @preg_replace('/' . str_replace('/', '\\/', $pattern) . '/', '[REDACTED]', $result);
-            if (is_string($replaced)) {
-                $result = $replaced;
-                continue;
-            }
-            $replaced = @preg_replace($pattern, '[REDACTED]', $result);
-            if (is_string($replaced)) {
-                $result = $replaced;
-            }
-        }
-
-        return $result;
     }
 }

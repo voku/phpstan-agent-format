@@ -22,7 +22,7 @@
   "scripts": {
     "test": "php tests/run.php",
     "lint": "php tests/lint.php",
-    "phpstan": "phpstan analyse --configuration phpstan.neon.dist",
+    "phpstan": "phpstan analyse --configuration phpstan.neon.dist --memory-limit=512M",
     "phpstan-compare": "php tests/phpstan-compare.php",
     "phpstan-compare-reduced": "php tests/phpstan-compare-reduced.php"
   },

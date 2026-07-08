@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace Voku\PhpstanAgentFormat\Context;
 
 use RuntimeException;
-use Voku\PhpstanAgentFormat\Config\AgentFormatConfig;
 
 final readonly class DocblockExtractor
 {
     public function __construct(
-        private AgentFormatConfig $config,
         private PhpSymbolScanner $symbolScanner,
+        private Redactor $redactor,
     ) {
     }
 
@@ -36,7 +35,7 @@ final readonly class DocblockExtractor
             return null;
         }
 
-        return $this->redact($docblock);
+        return $this->redactor->redact($docblock);
     }
 
     /**
@@ -54,7 +53,12 @@ final readonly class DocblockExtractor
             break;
         }
 
-        if ($i < 1 || trim((string) $lines[$i - 1]) !== '*/') {
+        $candidate = $i >= 1 ? trim((string) $lines[$i - 1]) : '';
+        if (str_starts_with($candidate, '/**') && str_ends_with($candidate, '*/')) {
+            return $candidate;
+        }
+
+        if ($i < 1 || $candidate !== '*/') {
             return null;
         }
 
@@ -67,23 +71,5 @@ final readonly class DocblockExtractor
         }
 
         return null;
-    }
-
-    private function redact(string $value): string
-    {
-        $result = $value;
-        foreach ($this->config->redactPatterns as $pattern) {
-            $replaced = @preg_replace('/' . str_replace('/', '\\/', $pattern) . '/', '[REDACTED]', $result);
-            if (is_string($replaced)) {
-                $result = $replaced;
-                continue;
-            }
-            $replaced = @preg_replace($pattern, '[REDACTED]', $result);
-            if (is_string($replaced)) {
-                $result = $replaced;
-            }
-        }
-
-        return $result;
     }
 }

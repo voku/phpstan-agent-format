@@ -88,11 +88,15 @@ final class PhpstanJsonExportIngestor
             return $trimmed;
         }
 
-        $jsonStart = strpos($trimmed, '{');
-        if ($jsonStart === false) {
-            return $trimmed;
+        $offset = 0;
+        foreach (preg_split('/\R/', $trimmed) ?: [] as $line) {
+            if (str_starts_with(ltrim((string) $line), '{')) {
+                return substr($trimmed, $offset + strspn((string) $line, " \t"));
+            }
+
+            $offset += strlen((string) $line) + 1;
         }
 
-        return substr($trimmed, $jsonStart);
+        return $trimmed;
     }
 }

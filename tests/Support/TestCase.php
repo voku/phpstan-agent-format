@@ -44,6 +44,24 @@ final class TestCase
     }
 
     /**
+     * @return array{0: string, 1: int}
+     */
+    public static function runPhpstan(string $root, string $configPath, string $errorFormat): array
+    {
+        $outputLines = [];
+        $exitCode = 0;
+
+        exec(sprintf(
+            '%s analyse --configuration %s --error-format=%s --no-progress 2>&1',
+            self::phpstanCommand($root),
+            escapeshellarg($configPath),
+            escapeshellarg($errorFormat),
+        ), $outputLines, $exitCode);
+
+        return [implode("\n", $outputLines), $exitCode];
+    }
+
+    /**
      * @param mixed $expected
      * @param mixed $actual
      */

@@ -50,14 +50,23 @@ final class PhpSymbolScanner
         $candidates = $this->candidateSymbols($symbolContext);
 
         foreach ($candidates as $candidate) {
+            $best = null;
             foreach ($declarations as $declaration) {
                 if ($declaration['kind'] !== $candidate['kind']) {
                     continue;
                 }
 
-                if ($this->symbolMatches($declaration['symbol'], $candidate['symbol'])) {
-                    return $declaration;
+                if (!$this->symbolMatches($declaration['symbol'], $candidate['symbol'])) {
+                    continue;
                 }
+
+                if ($best === null || abs($declaration['line'] - $line) < abs($best['line'] - $line)) {
+                    $best = $declaration;
+                }
+            }
+
+            if ($best !== null) {
+                return $best;
             }
         }
 

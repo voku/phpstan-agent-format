@@ -36,14 +36,7 @@ final class PhpstanCliConfigIntegrationTest
         file_put_contents($configPath, $config);
 
         try {
-            $outputLines = [];
-            $exitCode = 0;
-
-            exec(sprintf(
-                '%s analyse --configuration %s --error-format=agent --no-progress 2>&1',
-                TestCase::phpstanCommand($root),
-                escapeshellarg($configPath),
-            ), $outputLines, $exitCode);
+            [$output, $exitCode] = TestCase::runPhpstan($root, $configPath, 'agent');
 
             TestCase::assertSame(0, $exitCode, 'Clean fixtures should keep the CLI exit code at zero.');
 
@@ -57,7 +50,7 @@ final class PhpstanCliConfigIntegrationTest
              *   },
              *   clusters: list<array<mixed>>
              * } $decoded */
-            $decoded = Toon::decode(implode("\n", $outputLines));
+            $decoded = Toon::decode($output);
 
             TestCase::assertSame('phpstan-agent-format', $decoded['tool'], 'Clean runs should still emit the standard tool envelope.');
             TestCase::assertSame(0, $decoded['summary']['totalIssues'], 'Clean runs should report zero issues.');
@@ -93,14 +86,7 @@ final class PhpstanCliConfigIntegrationTest
         file_put_contents($configPath, $config);
 
         try {
-            $outputLines = [];
-            $exitCode = 0;
-
-            exec(sprintf(
-                '%s analyse --configuration %s --error-format=agent --no-progress 2>&1',
-                TestCase::phpstanCommand($root),
-                escapeshellarg($configPath),
-            ), $outputLines, $exitCode);
+            [$output, $exitCode] = TestCase::runPhpstan($root, $configPath, 'agent');
 
             TestCase::assertSame(1, $exitCode, 'Reduced-output fixtures should still fail PHPStan analysis.');
 
@@ -115,7 +101,7 @@ final class PhpstanCliConfigIntegrationTest
              *     suppressedDuplicateCount: int
              *   }>
              * } $decoded */
-            $decoded = Toon::decode(implode("\n", $outputLines));
+            $decoded = Toon::decode($output);
 
             TestCase::assertSame(2, $decoded['summary']['totalIssues'], 'Duplicate fixture should still count both raw issues.');
             TestCase::assertSame(1, $decoded['summary']['suppressedDuplicates'], 'Token reduction should suppress the extra representative issue.');
@@ -153,21 +139,14 @@ final class PhpstanCliConfigIntegrationTest
         file_put_contents($configPath, $config);
 
         try {
-            $outputLines = [];
-            $exitCode = 0;
-
-            exec(sprintf(
-                '%s analyse --configuration %s --error-format=agent --no-progress 2>&1',
-                TestCase::phpstanCommand($root),
-                escapeshellarg($configPath),
-            ), $outputLines, $exitCode);
+            [$output, $exitCode] = TestCase::runPhpstan($root, $configPath, 'agent');
 
             TestCase::assertSame(0, $exitCode, 'Dynamic constant names must not break the agent formatter.');
 
             /** @var array{
              *   summary: array{totalIssues: int}
              * } $decoded */
-            $decoded = Toon::decode(implode("\n", $outputLines));
+            $decoded = Toon::decode($output);
 
             TestCase::assertSame(0, $decoded['summary']['totalIssues'], 'Dynamic constant names must not change clean-run results.');
         } finally {

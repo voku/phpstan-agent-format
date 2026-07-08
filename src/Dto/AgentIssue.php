@@ -37,7 +37,9 @@ final readonly class AgentIssue
      *     contextTrace: array{hops: list<array{kind:string,location: array{file: string, line: int}, summary: string, symbol: ?string, ruleIdentifier: ?string}>},
      *     rootCauseSummary: string,
      *     repairStrategySummary: string,
-     *     secondaryLocations: list<array{file: string, line: int}>
+     *     secondaryLocations: list<array{file: string, line: int}>,
+     *     docblock?: ?string,
+     *     relatedDefinition?: array{file:string,line:int,symbol:string,kind:string,snippet:list<string>}|null
      * }
      */
     public function toArray(): array

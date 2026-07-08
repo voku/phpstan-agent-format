@@ -34,14 +34,7 @@ final class PhpstanCliBlindSpotMatrixTest
         file_put_contents($configPath, $config);
 
         try {
-            $outputLines = [];
-            $exitCode = 0;
-
-            exec(sprintf(
-                '%s analyse --configuration %s --error-format=agent --no-progress 2>&1',
-                TestCase::phpstanCommand($root),
-                escapeshellarg($configPath),
-            ), $outputLines, $exitCode);
+            [$output, $exitCode] = TestCase::runPhpstan($root, $configPath, 'agent');
 
             TestCase::assertSame(1, $exitCode, 'Blind-spot fixture matrix should produce failing PHPStan output.');
 
@@ -63,7 +56,7 @@ final class PhpstanCliBlindSpotMatrixTest
              *     }>
              *   }>
              * } $decoded */
-            $decoded = json_decode(implode("\n", $outputLines), true, 512, JSON_THROW_ON_ERROR);
+            $decoded = json_decode($output, true, 512, JSON_THROW_ON_ERROR);
 
             TestCase::assertSame(7, $decoded['summary']['totalIssues'], 'Blind-spot fixture matrix should contribute the expected issues.');
 
