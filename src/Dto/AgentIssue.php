@@ -39,7 +39,7 @@ final readonly class AgentIssue
      *     repairStrategySummary: string,
      *     secondaryLocations: list<array{file: string, line: int}>,
      *     docblock?: ?string,
-     *     relatedDefinition?: array{file:string,line:int,symbol:string,kind:string,snippet:list<string>}|null
+     *     relatedDefinition?: array{file:string,line:int,symbol:string,kind:string,snippet:list<string>,attributes:list<string>}|null
      * }
      */
     public function toArray(): array

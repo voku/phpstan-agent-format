@@ -8,6 +8,7 @@ final readonly class RelatedDefinition
 {
     /**
      * @param list<string> $snippet
+     * @param list<string> $attributes
      */
     public function __construct(
         public string $file,
@@ -15,11 +16,12 @@ final readonly class RelatedDefinition
         public string $symbol,
         public string $kind,
         public array $snippet,
+        public array $attributes = [],
     ) {
     }
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string,snippet:list<string>}
+     * @return array{file:string,line:int,symbol:string,kind:string,snippet:list<string>,attributes:list<string>}
      */
     public function toArray(): array
     {
@@ -29,6 +31,7 @@ final readonly class RelatedDefinition
             'symbol' => $this->symbol,
             'kind' => $this->kind,
             'snippet' => $this->snippet,
+            'attributes' => $this->attributes,
         ];
     }
 }

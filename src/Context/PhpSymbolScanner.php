@@ -8,6 +8,7 @@ use RuntimeException;
 use Throwable;
 use Voku\PhpstanAgentFormat\Dto\SymbolContext;
 use voku\SimplePhpParser\Model\BasePHPClass;
+use voku\SimplePhpParser\Model\PHPAttribute;
 use voku\SimplePhpParser\Model\PHPConst;
 use voku\SimplePhpParser\Model\PHPFunction;
 use voku\SimplePhpParser\Model\PHPProperty;
@@ -24,7 +25,7 @@ final class PhpSymbolScanner
     private array $cache = [];
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string}|null
+     * @return array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}|null
      */
     public function findNearestDeclaration(string $file, int $line): ?array
     {
@@ -44,7 +45,7 @@ final class PhpSymbolScanner
     }
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string}|null
+     * @return array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}|null
      */
     public function findRelatedDeclaration(string $file, int $line, SymbolContext $symbolContext): ?array
     {
@@ -103,7 +104,7 @@ final class PhpSymbolScanner
     }
 
     /**
-     * @return list<array{file:string,line:int,symbol:string,kind:string}>
+     * @return list<array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}>
      */
     private function declarations(string $file): array
     {
@@ -141,7 +142,7 @@ final class PhpSymbolScanner
     }
 
     /**
-     * @param list<array{file:string,line:int,symbol:string,kind:string}> $declarations
+     * @param list<array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}> $declarations
      */
     private function appendClassLikeDeclarations(array &$declarations, BasePHPClass $class, string $kind): void
     {
@@ -152,6 +153,7 @@ final class PhpSymbolScanner
             'line' => $class->line ?? 0,
             'symbol' => $class->name,
             'kind' => $kind,
+            'attributes' => $this->attributeLabels($class->attributes),
         ];
 
         foreach ($class->methods as $method) {
@@ -166,7 +168,7 @@ final class PhpSymbolScanner
     }
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string}
+     * @return array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}
      */
     private function declarationFromFunction(PHPFunction $function, string $kind, ?string $className = null): array
     {
@@ -175,11 +177,12 @@ final class PhpSymbolScanner
             'line' => $function->line ?? 0,
             'symbol' => $className !== null ? $className . '::' . $function->name : $function->name,
             'kind' => $kind,
+            'attributes' => $this->functionAttributeLabels($function),
         ];
     }
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string}
+     * @return array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}
      */
     private function declarationFromProperty(PHPProperty $property, string $classFile, string $className): array
     {
@@ -188,11 +191,12 @@ final class PhpSymbolScanner
             'line' => $property->line ?? 0,
             'symbol' => $className . '::$' . $property->name,
             'kind' => 'property',
+            'attributes' => $this->attributeLabels($property->attributes),
         ];
     }
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string}
+     * @return array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}
      */
     private function declarationFromConstant(PHPConst $constant, string $classFile, ?string $className): array
     {
@@ -201,7 +205,43 @@ final class PhpSymbolScanner
             'line' => $constant->line ?? 0,
             'symbol' => $className !== null ? $className . '::' . $constant->name : $constant->name,
             'kind' => 'constant',
+            'attributes' => $this->attributeLabels($constant->attributes),
         ];
+    }
+
+
+    /**
+     * @param array<int|string, PHPAttribute> $attributes
+     * @return list<string>
+     */
+    private function attributeLabels(array $attributes, ?string $prefix = null): array
+    {
+        $labels = [];
+        foreach ($attributes as $attribute) {
+            $label = $attribute->name;
+            if ($attribute->arguments !== []) {
+                $encoded = json_encode($attribute->arguments, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                $label .= '(' . $encoded . ')';
+            }
+            $labels[] = $prefix !== null ? $prefix . ': ' . $label : $label;
+        }
+
+        return $labels;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function functionAttributeLabels(PHPFunction $function): array
+    {
+        $labels = $this->attributeLabels($function->attributes);
+        foreach ($function->parameters as $parameter) {
+            foreach ($this->attributeLabels($parameter->attributes, 'param $' . $parameter->name) as $label) {
+                $labels[] = $label;
+            }
+        }
+
+        return $labels;
     }
 
     /**

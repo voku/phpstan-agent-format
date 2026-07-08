@@ -43,7 +43,23 @@ final readonly class RelatedDefinitionExtractor
             symbol: $declaration['symbol'],
             kind: $declaration['kind'],
             snippet: [$this->redactor->redact($this->compactDeclaration($lines, $declaration['line']))],
+            attributes: $this->redactAttributes($declaration['attributes']),
         );
+    }
+
+
+    /**
+     * @param list<string> $attributes
+     * @return list<string>
+     */
+    private function redactAttributes(array $attributes): array
+    {
+        $redacted = [];
+        foreach ($attributes as $attribute) {
+            $redacted[] = $this->redactor->redact($attribute);
+        }
+
+        return $redacted;
     }
 
     /**

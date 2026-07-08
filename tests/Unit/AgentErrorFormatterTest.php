@@ -114,6 +114,7 @@ final class AgentErrorFormatterTest
 <?php
 
 /** Builds a verified recipient email address. api_key = function-secret */
+#[ContextFixtureAttribute('function')]
 function contextFixtureFunction(): string
 {
     return 'root@example.com';
@@ -123,19 +124,22 @@ function contextFixtureFunction(): string
  * Sends an email to a verified recipient.
  * api_key = super-secret
  */
+#[ContextFixtureAttribute('class secret = class-secret')]
 final class ContextFixtureMailer
 {
     /**
      * The default verified recipient.
      * secret = property-secret
      */
+    #[ContextFixtureAttribute('property')]
     public string $email = 'secret = property-secret';
 
     /**
      * Sends a message body.
      * password = method-secret
      */
-    public function send(string $email): void
+    #[ContextFixtureAttribute('method')]
+    public function send(#[ContextFixtureAttribute('parameter')] string $email): void
     {
     }
 }
@@ -231,18 +235,21 @@ PHP);
             TestCase::assertTrue(str_contains($joined, 'The default verified recipient.'), 'Property issues should include the nearest property docblock.');
             TestCase::assertTrue(str_contains($joined, 'Builds a verified recipient email address.'), 'Function issues should include single-line function docblocks.');
             TestCase::assertTrue(str_contains($joined, 'Sends an email to a verified recipient.'), 'Class issues should include the nearest class docblock.');
-            TestCase::assertTrue(str_contains($joined, '[REDACTED]'), 'Docblocks and related snippets should use configured redaction patterns.');
+            TestCase::assertTrue(str_contains($joined, '[REDACTED]'), 'Docblocks, attributes, and related snippets should use configured redaction patterns.');
             TestCase::assertTrue(!str_contains($joined, 'method-secret'), 'Redaction should remove method docblock secrets.');
             TestCase::assertTrue(!str_contains($joined, 'property-secret'), 'Redaction should remove property docblock secrets.');
+            TestCase::assertTrue(!str_contains($joined, 'class-secret'), 'Redaction should remove attribute secrets.');
+            TestCase::assertTrue(str_contains($joined, 'ContextFixtureAttribute'), 'Related definitions should expose parser-derived attributes.');
+            TestCase::assertTrue(str_contains($joined, 'param $email: ContextFixtureAttribute'), 'Method related definitions should expose parser-derived parameter attributes.');
 
             $methodDefinitionFound = false;
             $propertyDefinitionFound = false;
             $functionDefinitionFound = false;
             $classDefinitionFound = false;
             foreach ($issues as $issue) {
-                /** @var array{kind:string,snippet:list<string>}|null $definition */
+                /** @var array{kind:string,symbol:string,snippet:list<string>}|null $definition */
                 $definition = $issue['relatedDefinition'];
-                if ($definition !== null && $definition['kind'] === 'method' && str_contains($definition['snippet'][0], 'public function send(string $email): void')) {
+                if ($definition !== null && $definition['kind'] === 'method' && str_contains($definition['snippet'][0], 'public function send(')) {
                     $methodDefinitionFound = true;
                 }
                 if ($definition !== null && $definition['kind'] === 'property' && str_contains($definition['snippet'][0], 'public string $email')) {
@@ -251,7 +258,7 @@ PHP);
                 if ($definition !== null && $definition['kind'] === 'function' && str_contains($definition['snippet'][0], 'function contextFixtureFunction(): string')) {
                     $functionDefinitionFound = true;
                 }
-                if ($definition !== null && $definition['kind'] === 'class' && str_contains($definition['snippet'][0], 'final class ContextFixtureMailer')) {
+                if ($definition !== null && $definition['kind'] === 'class' && $definition['symbol'] === 'ContextFixtureMailer') {
                     $classDefinitionFound = true;
                 }
             }
