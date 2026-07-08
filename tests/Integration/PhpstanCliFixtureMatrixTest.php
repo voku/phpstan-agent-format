@@ -32,19 +32,10 @@ final class PhpstanCliFixtureMatrixTest
         file_put_contents($configPath, $config);
 
         try {
-            $outputLines = [];
-            $exitCode = 0;
-
-            exec(sprintf(
-                '%s %s analyse --configuration %s --error-format=agent --no-progress 2>&1',
-                escapeshellarg(PHP_BINARY),
-                escapeshellarg($root . '/vendor/bin/phpstan'),
-                escapeshellarg($configPath),
-            ), $outputLines, $exitCode);
+            [$output, $exitCode] = TestCase::runPhpstan($root, $configPath, 'agent');
 
             TestCase::assertSame(1, $exitCode, 'PHPStan CLI should fail when the fixture matrix contains issues.');
 
-            $output = implode("\n", $outputLines);
             /** @var array{
              *   summary: array{totalIssues: int},
              *   clusters: list<array{

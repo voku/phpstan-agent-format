@@ -16,6 +16,7 @@ final class AgentErrorFormatterTest
     {
         self::assertCleanRunsReturnZeroExitCode();
         self::assertJsonExportArrayPayloadSupportsAllOutputModes();
+        self::assertDocblockAndRelatedDefinitionOptions();
     }
 
     private static function assertCleanRunsReturnZeroExitCode(): void
@@ -105,4 +106,172 @@ final class AgentErrorFormatterTest
         TestCase::assertTrue(str_contains($compactOutput, 'phpstan-agent-format totalIssues=1 clusters=1 suppressed=0'), 'Compact mode should emit the summary line.');
         TestCase::assertTrue(str_contains($compactOutput, 'rule=method.notFound'), 'Compact mode should include cluster rule identifiers.');
     }
+
+    private static function assertDocblockAndRelatedDefinitionOptions(): void
+    {
+        $fixture = sys_get_temp_dir() . '/phpstan-agent-format-context-fixture-' . sha1((string) microtime(true)) . '.php';
+        file_put_contents($fixture, <<<'PHP'
+<?php
+
+/** Builds a verified recipient email address. api_key = function-secret */
+#[ContextFixtureAttribute('function')]
+function contextFixtureFunction(): string
+{
+    return 'root@example.com';
+}
+
+/**
+ * Sends an email to a verified recipient.
+ * api_key = super-secret
+ */
+#[ContextFixtureAttribute('class secret = class-secret')]
+final class ContextFixtureMailer
+{
+    /**
+     * The default verified recipient.
+     * secret = property-secret
+     */
+    #[ContextFixtureAttribute('property')]
+    public string $email = 'secret = property-secret';
+
+    /**
+     * Sends a message body.
+     * password = method-secret
+     */
+    #[ContextFixtureAttribute('method')]
+    public function send(#[ContextFixtureAttribute('parameter')] string $email): void
+    {
+    }
+}
+PHP);
+
+        try {
+            $fixtureLines = file($fixture, FILE_IGNORE_NEW_LINES);
+            if (!is_array($fixtureLines)) {
+                throw new \RuntimeException('Context fixture should be readable.');
+            }
+            $lineOf = static function (string $needle) use ($fixtureLines): int {
+                foreach ($fixtureLines as $index => $line) {
+                    if (str_contains((string) $line, $needle)) {
+                        return $index + 1;
+                    }
+                }
+
+                return 1;
+            };
+
+            $payload = [
+                'files' => [
+                    $fixture => [
+                        'messages' => [
+                            [
+                                'message' => 'Parameter #1 $email of method ContextFixtureMailer::send() expects string, string|null given.',
+                                'line' => $lineOf('public function send'),
+                                'identifier' => 'argument.type',
+                                'metadata' => [
+                                    'className' => 'ContextFixtureMailer',
+                                    'methodName' => 'send',
+                                    'parameterName' => 'email',
+                                ],
+                            ],
+                            [
+                                'message' => 'Property ContextFixtureMailer::$email type has no value type specified in iterable type array.',
+                                'line' => $lineOf('public string $email'),
+                                'identifier' => 'missingType.iterableValue',
+                                'metadata' => [
+                                    'className' => 'ContextFixtureMailer',
+                                    'propertyName' => 'email',
+                                ],
+                            ],
+                            [
+                                'message' => 'Function contextFixtureFunction() should return string but returns int.',
+                                'line' => $lineOf('function contextFixtureFunction'),
+                                'identifier' => 'return.type',
+                                'metadata' => [
+                                    'functionName' => 'contextFixtureFunction',
+                                ],
+                            ],
+                            [
+                                'message' => 'Class ContextFixtureMailer has an invalid PHPDoc tag.',
+                                'line' => $lineOf('final class ContextFixtureMailer'),
+                                'identifier' => 'phpDoc.parseError',
+                                'metadata' => [
+                                    'className' => 'ContextFixtureMailer',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+                'errors' => [],
+            ];
+
+            $disabled = new AgentErrorFormatter(['agentFormat' => ['outputMode' => 'json', 'includeDocblock' => false, 'includeRelatedDefinition' => false]]);
+            /** @var array{clusters:list<array{representativeIssues:list<array<string,mixed>>}>} $disabledDecoded */
+            $disabledDecoded = json_decode($disabled->formatPhpstanJsonExport($payload), true, 512, JSON_THROW_ON_ERROR);
+            $disabledIssue = $disabledDecoded['clusters'][0]['representativeIssues'][0];
+            TestCase::assertTrue(!array_key_exists('docblock', $disabledIssue), 'Disabled docblock option should preserve the existing issue schema.');
+            TestCase::assertTrue(!array_key_exists('relatedDefinition', $disabledIssue), 'Disabled related definition option should preserve the existing issue schema.');
+
+            $enabled = new AgentErrorFormatter([
+                'agentFormat' => [
+                    'outputMode' => 'json',
+                    'includeDocblock' => true,
+                    'includeRelatedDefinition' => true,
+                    'redactPatterns' => ['(?i)api[_-]?key\s*=\s*.+', '(?i)secret\s*=\s*.+', '(?i)password\s*=\s*.+'],
+                ],
+            ]);
+            /** @var array{clusters:list<array{representativeIssues:list<array<string,mixed>>}>} $enabledDecoded */
+            $enabledDecoded = json_decode($enabled->formatPhpstanJsonExport($payload), true, 512, JSON_THROW_ON_ERROR);
+            $issues = [];
+            foreach ($enabledDecoded['clusters'] as $cluster) {
+                foreach ($cluster['representativeIssues'] as $issue) {
+                    $issues[] = $issue;
+                }
+            }
+
+            TestCase::assertSame(4, count($issues), 'Context options should keep all representative issues valid.');
+            $joined = json_encode($issues, JSON_THROW_ON_ERROR);
+            TestCase::assertTrue(str_contains($joined, 'Sends a message body.'), 'Method issues should include the nearest method docblock.');
+            TestCase::assertTrue(str_contains($joined, 'The default verified recipient.'), 'Property issues should include the nearest property docblock.');
+            TestCase::assertTrue(str_contains($joined, 'Builds a verified recipient email address.'), 'Function issues should include single-line function docblocks.');
+            TestCase::assertTrue(str_contains($joined, 'Sends an email to a verified recipient.'), 'Class issues should include the nearest class docblock.');
+            TestCase::assertTrue(str_contains($joined, '[REDACTED]'), 'Docblocks, attributes, and related snippets should use configured redaction patterns.');
+            TestCase::assertTrue(!str_contains($joined, 'method-secret'), 'Redaction should remove method docblock secrets.');
+            TestCase::assertTrue(!str_contains($joined, 'property-secret'), 'Redaction should remove property docblock secrets.');
+            TestCase::assertTrue(!str_contains($joined, 'class-secret'), 'Redaction should remove attribute secrets.');
+            TestCase::assertTrue(str_contains($joined, 'ContextFixtureAttribute'), 'Related definitions should expose parser-derived attributes.');
+            TestCase::assertTrue(str_contains($joined, 'param $email: ContextFixtureAttribute'), 'Method related definitions should expose parser-derived parameter attributes.');
+
+            $methodDefinitionFound = false;
+            $propertyDefinitionFound = false;
+            $functionDefinitionFound = false;
+            $classDefinitionFound = false;
+            foreach ($issues as $issue) {
+                /** @var array{kind:string,symbol:string,snippet:list<string>}|null $definition */
+                $definition = $issue['relatedDefinition'];
+                if ($definition !== null && $definition['kind'] === 'method' && str_contains($definition['snippet'][0], 'public function send(')) {
+                    $methodDefinitionFound = true;
+                }
+                if ($definition !== null && $definition['kind'] === 'property' && str_contains($definition['snippet'][0], 'public string $email')) {
+                    $propertyDefinitionFound = true;
+                }
+                if ($definition !== null && $definition['kind'] === 'function' && str_contains($definition['snippet'][0], 'function contextFixtureFunction(): string')) {
+                    $functionDefinitionFound = true;
+                }
+                if ($definition !== null && $definition['kind'] === 'class' && $definition['symbol'] === 'ContextFixtureMailer') {
+                    $classDefinitionFound = true;
+                }
+            }
+
+            TestCase::assertTrue($methodDefinitionFound, 'Related definitions should include compact method signatures.');
+            TestCase::assertTrue($propertyDefinitionFound, 'Related definitions should include compact property declarations.');
+            TestCase::assertTrue($functionDefinitionFound, 'Related definitions should include compact function signatures.');
+            TestCase::assertTrue($classDefinitionFound, 'Related definitions should include compact class declarations.');
+        } finally {
+            if (is_file($fixture)) {
+                unlink($fixture);
+            }
+        }
+    }
+
 }

@@ -10,8 +10,10 @@ use Voku\PhpstanAgentFormat\Dto\CodeSnippet;
 
 final readonly class ContextExtractor
 {
-    public function __construct(private AgentFormatConfig $config)
-    {
+    public function __construct(
+        private AgentFormatConfig $config,
+        private ?Redactor $redactor = null,
+    ) {
     }
 
     public function extractSnippet(string $file, int $line): CodeSnippet
@@ -31,28 +33,14 @@ final readonly class ContextExtractor
 
         for ($i = $start; $i <= $end; $i++) {
             $lineContent = (string) ($content[$i - 1] ?? '');
-            $lines[] = $this->redact($lineContent);
+            $lines[] = $this->redactor()->redact($lineContent);
         }
 
         return new CodeSnippet($start, max(1, $line), $lines);
     }
 
-    private function redact(string $line): string
+    private function redactor(): Redactor
     {
-        $result = $line;
-        foreach ($this->config->redactPatterns as $pattern) {
-            $replaced = @preg_replace('/' . str_replace('/', '\\/', $pattern) . '/', '[REDACTED]', $result);
-            if (is_string($replaced)) {
-                $result = $replaced;
-                continue;
-            }
-
-            $replaced = @preg_replace($pattern, '[REDACTED]', $result);
-            if (is_string($replaced)) {
-                $result = $replaced;
-            }
-        }
-
-        return $result;
+        return $this->redactor ?? new Redactor($this->config->redactPatterns);
     }
 }

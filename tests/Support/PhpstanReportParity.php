@@ -86,18 +86,7 @@ final class PhpstanReportParity
      */
     private static function runPhpstan(string $root, string $configPath, string $errorFormat): array
     {
-        $outputLines = [];
-        $exitCode = 0;
-
-        exec(sprintf(
-            '%s %s analyse --configuration %s --error-format=%s --no-progress 2>&1',
-            escapeshellarg(PHP_BINARY),
-            escapeshellarg($root . '/vendor/bin/phpstan'),
-            escapeshellarg($configPath),
-            escapeshellarg($errorFormat),
-        ), $outputLines, $exitCode);
-
-        return [implode("\n", $outputLines), $exitCode];
+        return TestCase::runPhpstan($root, $configPath, $errorFormat);
     }
 
     /**

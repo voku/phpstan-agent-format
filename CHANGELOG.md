@@ -5,6 +5,19 @@ All notable changes to `voku/phpstan-agent-format` will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Implemented `includeDocblock` and `includeRelatedDefinition` as active formatter options.
+- Added parser-backed symbol scanning with `voku/simple-php-code-parser` for related declarations, attributes, and docblock lookup.
+- Added optional related-definition attribute context to help agents understand framework annotations/attributes near reported symbols.
+
+### Changed
+
+- Redaction is shared across snippets, docblocks, related declarations, and related attributes.
+- Token-budget reduction now removes optional extracted context before trimming core issue summaries.
+
 ## [0.1.1] - 2026-04-28
 
 ### Fixed

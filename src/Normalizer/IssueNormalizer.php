@@ -7,6 +7,9 @@ namespace Voku\PhpstanAgentFormat\Normalizer;
 use PHPStan\Command\AnalysisResult;
 use Voku\PhpstanAgentFormat\Context\ContextExtractor;
 use Voku\PhpstanAgentFormat\Context\ContextTraceBuilder;
+use Voku\PhpstanAgentFormat\Context\DocblockExtractor;
+use Voku\PhpstanAgentFormat\Context\RelatedDefinitionExtractor;
+use Voku\PhpstanAgentFormat\Config\AgentFormatConfig;
 use Voku\PhpstanAgentFormat\Dto\AgentIssue;
 use Voku\PhpstanAgentFormat\Dto\FileLocation;
 use Voku\PhpstanAgentFormat\Dto\FixHint;
@@ -38,6 +41,9 @@ final readonly class IssueNormalizer
     public function __construct(
         private ContextExtractor $contextExtractor,
         private ContextTraceBuilder $traceBuilder,
+        private ?AgentFormatConfig $config = null,
+        private ?DocblockExtractor $docblockExtractor = null,
+        private ?RelatedDefinitionExtractor $relatedDefinitionExtractor = null,
     ) {
     }
 
@@ -79,6 +85,8 @@ final readonly class IssueNormalizer
             $symbolContext = $this->extractSymbolContext($message, $ruleIdentifier, $tip, $metadata);
             $snippet = $this->contextExtractor->extractSnippet($filePath, $line);
             $fixHint = $this->createFixHint($message, $ruleIdentifier);
+            $docblock = $this->config?->includeDocblock === true ? $this->docblockExtractor?->extract($filePath, $line) : null;
+            $relatedDefinition = $this->config?->includeRelatedDefinition === true ? $this->relatedDefinitionExtractor?->extract($filePath, $line, $symbolContext) : null;
 
             $issues[] = new AgentIssue(
                 id: $this->issueId($file, $line, $message, $index),
@@ -90,6 +98,10 @@ final readonly class IssueNormalizer
                 contextTrace: $this->traceBuilder->build($location, $symbolContext, $ruleIdentifier, $message, $nodeLocation, $nodeType, $traitLocation, $tip),
                 fixHint: $fixHint,
                 secondaryLocations: $this->extractSecondaryLocations($location, $nodeLocation, $traitLocation),
+                exposeDocblock: $this->config?->includeDocblock === true,
+                docblock: $docblock,
+                exposeRelatedDefinition: $this->config?->includeRelatedDefinition === true,
+                relatedDefinition: $relatedDefinition,
             );
         }
 
@@ -108,6 +120,10 @@ final readonly class IssueNormalizer
                 snippet: $this->contextExtractor->extractSnippet('unknown.php', 1),
                 contextTrace: $this->traceBuilder->build($location, $symbolContext, $ruleIdentifier, $message),
                 fixHint: $this->createFixHint($message, $ruleIdentifier),
+                exposeDocblock: $this->config?->includeDocblock === true,
+                docblock: null,
+                exposeRelatedDefinition: $this->config?->includeRelatedDefinition === true,
+                relatedDefinition: null,
             );
         }
 
