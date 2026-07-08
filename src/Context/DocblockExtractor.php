@@ -9,8 +9,10 @@ use Voku\PhpstanAgentFormat\Config\AgentFormatConfig;
 
 final readonly class DocblockExtractor
 {
-    public function __construct(private AgentFormatConfig $config)
-    {
+    public function __construct(
+        private AgentFormatConfig $config,
+        private PhpSymbolScanner $symbolScanner,
+    ) {
     }
 
     public function extract(string $file, int $line): ?string
@@ -24,53 +26,17 @@ final readonly class DocblockExtractor
             throw new RuntimeException(sprintf('Could not read file for docblock extraction: %s', $file));
         }
 
-        $declarationLine = $this->findNearestDeclarationLine($lines, $line);
-        if ($declarationLine === null) {
+        $declaration = $this->symbolScanner->findNearestDeclaration($file, $line);
+        if ($declaration === null || $declaration['line'] < 1) {
             return null;
         }
 
-        $docblock = $this->findDocblockBefore($lines, $declarationLine);
+        $docblock = $this->findDocblockBefore($lines, $declaration['line']);
         if ($docblock === null) {
             return null;
         }
 
         return $this->redact($docblock);
-    }
-
-    /**
-     * @param list<string> $lines
-     */
-    private function findNearestDeclarationLine(array $lines, int $line): ?int
-    {
-        $limit = min(count($lines), max(1, $line));
-        for ($i = $limit; $i >= 1; $i--) {
-            if ($this->isDeclarationLine((string) $lines[$i - 1])) {
-                return $i;
-            }
-
-            $trimmed = trim((string) $lines[$i - 1]);
-            if ($i !== $limit && $trimmed !== '' && !$this->isDeclarationContinuation($trimmed)) {
-                // Continue through function bodies, but avoid walking past unrelated top-level statements.
-                if (str_ends_with($trimmed, ';') && !str_contains($trimmed, '$this->')) {
-                    break;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private function isDeclarationLine(string $line): bool
-    {
-        return preg_match('/^\s*(?:#\[.*\]\s*)*(?:(?:abstract|final|readonly)\s+)*(?:class|interface|trait|enum)\s+[A-Za-z_][A-Za-z0-9_]*\b/', $line) === 1
-            || preg_match('/^\s*(?:#\[.*\]\s*)*(?:(?:public|protected|private|static|abstract|final)\s+)*function\s+[A-Za-z_][A-Za-z0-9_]*\s*\(/', $line) === 1
-            || preg_match('/^\s*(?:#\[.*\]\s*)*(?:(?:public|protected|private|static|readonly)\s+)+[^;{]*\$[A-Za-z_][A-Za-z0-9_]*\b/', $line) === 1
-            || preg_match('/^\s*(?:#\[.*\]\s*)*(?:(?:public|protected|private)\s+)?const\s+[A-ZA-Za-z_][A-Za-z0-9_]*\b/', $line) === 1;
-    }
-
-    private function isDeclarationContinuation(string $trimmed): bool
-    {
-        return $trimmed === '' || str_starts_with($trimmed, '#[') || str_starts_with($trimmed, '*') || str_starts_with($trimmed, '*/') || str_contains($trimmed, 'function ') || str_contains($trimmed, 'class ');
     }
 
     /**
@@ -117,6 +83,7 @@ final readonly class DocblockExtractor
                 $result = $replaced;
             }
         }
+
         return $result;
     }
 }

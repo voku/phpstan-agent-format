@@ -106,11 +106,21 @@ final class AgentErrorFormatterTest
         TestCase::assertTrue(str_contains($compactOutput, 'phpstan-agent-format totalIssues=1 clusters=1 suppressed=0'), 'Compact mode should emit the summary line.');
         TestCase::assertTrue(str_contains($compactOutput, 'rule=method.notFound'), 'Compact mode should include cluster rule identifiers.');
     }
+
     private static function assertDocblockAndRelatedDefinitionOptions(): void
     {
         $fixture = sys_get_temp_dir() . '/phpstan-agent-format-context-fixture.php';
         file_put_contents($fixture, <<<'PHP'
 <?php
+
+/**
+ * Builds a verified recipient email address.
+ * api_key = function-secret
+ */
+function contextFixtureFunction(): string
+{
+    return 'root@example.com';
+}
 
 /**
  * Sends an email to a verified recipient.
@@ -134,13 +144,27 @@ final class ContextFixtureMailer
 }
 PHP);
 
+        $fixtureLines = file($fixture, FILE_IGNORE_NEW_LINES);
+        if (!is_array($fixtureLines)) {
+            throw new \RuntimeException('Context fixture should be readable.');
+        }
+        $lineOf = static function (string $needle) use ($fixtureLines): int {
+            foreach ($fixtureLines as $index => $line) {
+                if (str_contains((string) $line, $needle)) {
+                    return $index + 1;
+                }
+            }
+
+            return 1;
+        };
+
         $payload = [
             'files' => [
                 $fixture => [
                     'messages' => [
                         [
                             'message' => 'Parameter #1 $email of method ContextFixtureMailer::send() expects string, string|null given.',
-                            'line' => 18,
+                            'line' => $lineOf('public function send'),
                             'identifier' => 'argument.type',
                             'metadata' => [
                                 'className' => 'ContextFixtureMailer',
@@ -150,11 +174,27 @@ PHP);
                         ],
                         [
                             'message' => 'Property ContextFixtureMailer::$email type has no value type specified in iterable type array.',
-                            'line' => 12,
+                            'line' => $lineOf('public string $email'),
                             'identifier' => 'missingType.iterableValue',
                             'metadata' => [
                                 'className' => 'ContextFixtureMailer',
                                 'propertyName' => 'email',
+                            ],
+                        ],
+                        [
+                            'message' => 'Function contextFixtureFunction() should return string but returns int.',
+                            'line' => $lineOf('function contextFixtureFunction'),
+                            'identifier' => 'return.type',
+                            'metadata' => [
+                                'functionName' => 'contextFixtureFunction',
+                            ],
+                        ],
+                        [
+                            'message' => 'Class ContextFixtureMailer has an invalid PHPDoc tag.',
+                            'line' => $lineOf('final class ContextFixtureMailer'),
+                            'identifier' => 'phpDoc.parseError',
+                            'metadata' => [
+                                'className' => 'ContextFixtureMailer',
                             ],
                         ],
                     ],
@@ -187,16 +227,20 @@ PHP);
             }
         }
 
-        TestCase::assertSame(2, count($issues), 'Context options should keep both representative issues valid.');
+        TestCase::assertSame(4, count($issues), 'Context options should keep all representative issues valid.');
         $joined = json_encode($issues, JSON_THROW_ON_ERROR);
         TestCase::assertTrue(str_contains($joined, 'Sends a message body.'), 'Method issues should include the nearest method docblock.');
         TestCase::assertTrue(str_contains($joined, 'The default verified recipient.'), 'Property issues should include the nearest property docblock.');
+        TestCase::assertTrue(str_contains($joined, 'Builds a verified recipient email address.'), 'Function issues should include the nearest function docblock.');
+        TestCase::assertTrue(str_contains($joined, 'Sends an email to a verified recipient.'), 'Class issues should include the nearest class docblock.');
         TestCase::assertTrue(str_contains($joined, '[REDACTED]'), 'Docblocks and related snippets should use configured redaction patterns.');
         TestCase::assertTrue(!str_contains($joined, 'method-secret'), 'Redaction should remove method docblock secrets.');
         TestCase::assertTrue(!str_contains($joined, 'property-secret'), 'Redaction should remove property docblock secrets.');
 
         $methodDefinitionFound = false;
         $propertyDefinitionFound = false;
+        $functionDefinitionFound = false;
+        $classDefinitionFound = false;
         foreach ($issues as $issue) {
             /** @var array{kind:string,snippet:list<string>}|null $definition */
             $definition = $issue['relatedDefinition'];
@@ -206,10 +250,18 @@ PHP);
             if ($definition !== null && $definition['kind'] === 'property' && str_contains($definition['snippet'][0], 'public string $email')) {
                 $propertyDefinitionFound = true;
             }
+            if ($definition !== null && $definition['kind'] === 'function' && str_contains($definition['snippet'][0], 'function contextFixtureFunction(): string')) {
+                $functionDefinitionFound = true;
+            }
+            if ($definition !== null && $definition['kind'] === 'class' && str_contains($definition['snippet'][0], 'final class ContextFixtureMailer')) {
+                $classDefinitionFound = true;
+            }
         }
 
         TestCase::assertTrue($methodDefinitionFound, 'Related definitions should include compact method signatures.');
         TestCase::assertTrue($propertyDefinitionFound, 'Related definitions should include compact property declarations.');
+        TestCase::assertTrue($functionDefinitionFound, 'Related definitions should include compact function signatures.');
+        TestCase::assertTrue($classDefinitionFound, 'Related definitions should include compact class declarations.');
 
         @unlink($fixture);
     }

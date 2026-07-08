@@ -6,7 +6,8 @@
   "require": {
     "php": "^8.2",
     "phpstan/phpstan": "^2.1",
-    "helgesverre/toon": "^3.1.0"
+    "helgesverre/toon": "^3.1.0",
+    "voku/simple-php-code-parser": "^0.21"
   },
   "autoload": {
     "psr-4": {
@@ -21,7 +22,7 @@
   "scripts": {
     "test": "php tests/run.php",
     "lint": "php tests/lint.php",
-    "phpstan": "phpstan analyse --configuration phpstan.neon.dist --memory-limit=-1",
+    "phpstan": "phpstan analyse --configuration phpstan.neon.dist",
     "phpstan-compare": "php tests/phpstan-compare.php",
     "phpstan-compare-reduced": "php tests/phpstan-compare-reduced.php"
   },

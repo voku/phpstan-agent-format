@@ -15,6 +15,7 @@ use Voku\PhpstanAgentFormat\Context\ContextExtractor;
 use Voku\PhpstanAgentFormat\Context\ContextTraceBuilder;
 use Voku\PhpstanAgentFormat\Context\DocblockExtractor;
 use Voku\PhpstanAgentFormat\Context\RelatedDefinitionExtractor;
+use Voku\PhpstanAgentFormat\Context\PhpSymbolScanner;
 use Voku\PhpstanAgentFormat\Normalizer\IssueNormalizer;
 use Voku\PhpstanAgentFormat\Serializer\CompactTextAgentSerializer;
 use Voku\PhpstanAgentFormat\Serializer\JsonAgentSerializer;
@@ -38,9 +39,16 @@ final class AgentErrorFormatter implements ErrorFormatter
         ?AgentFormatConfig $config = null,
     ) {
         $this->config = $config ?? AgentFormatConfig::fromParameters($parameters);
+        $symbolScanner = new PhpSymbolScanner();
         $this->presentationBuilder = new AgentPresentationBuilder(
             $this->config,
-            $issueNormalizer ?? new IssueNormalizer(new ContextExtractor($this->config), new ContextTraceBuilder(), $this->config, new DocblockExtractor($this->config), new RelatedDefinitionExtractor($this->config)),
+            $issueNormalizer ?? new IssueNormalizer(
+                new ContextExtractor($this->config),
+                new ContextTraceBuilder(),
+                $this->config,
+                new DocblockExtractor($this->config, $symbolScanner),
+                new RelatedDefinitionExtractor($this->config, $symbolScanner),
+            ),
             $issueClusterer ?? new IssueClusterer($this->config),
             $tokenBudgetReducer ?? new TokenBudgetReducer($this->config),
         );
