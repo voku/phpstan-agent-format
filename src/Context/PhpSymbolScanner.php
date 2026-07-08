@@ -16,6 +16,8 @@ use voku\SimplePhpParser\Parsers\Helper\ParserContainer;
 
 final class PhpSymbolScanner
 {
+    private const MAX_CACHE = 50;
+
     /**
      * @var array<string, ParserContainer>
      */
@@ -81,13 +83,20 @@ final class PhpSymbolScanner
 
         $realPath = realpath($file) ?: $file;
         if (isset($this->cache[$realPath])) {
-            return $this->cache[$realPath];
+            $container = $this->cache[$realPath];
+            unset($this->cache[$realPath]);
+
+            return $this->cache[$realPath] = $container;
         }
 
         try {
             $container = PhpCodeParser::getPhpFiles($realPath);
         } catch (Throwable $throwable) {
             throw new RuntimeException(sprintf('Could not scan PHP symbols in file: %s', $file), 0, $throwable);
+        }
+
+        if (count($this->cache) >= self::MAX_CACHE) {
+            array_shift($this->cache);
         }
 
         return $this->cache[$realPath] = $container;
@@ -202,7 +211,11 @@ final class PhpSymbolScanner
     {
         $candidates = [];
         if ($context->methodName !== null) {
-            $candidates[] = ['kind' => 'method', 'symbol' => $context->methodName];
+            $method = $context->methodName;
+            $symbol = $context->className !== null && !str_contains($method, '::')
+                ? $context->className . '::' . $method
+                : $method;
+            $candidates[] = ['kind' => 'method', 'symbol' => $symbol];
         }
         if ($context->functionName !== null) {
             $candidates[] = ['kind' => 'function', 'symbol' => $context->functionName];
@@ -224,6 +237,14 @@ final class PhpSymbolScanner
     {
         if ($actual === $expected) {
             return true;
+        }
+
+        if (str_contains($actual, '::') && str_contains($expected, '::')) {
+            [$actualClass, $actualMember] = explode('::', $actual, 2);
+            [$expectedClass, $expectedMember] = explode('::', $expected, 2);
+
+            return $this->shortName($actualClass) === $this->shortName($expectedClass)
+                && $this->shortName($actualMember) === $this->shortName($expectedMember);
         }
 
         return $this->shortName($actual) === $this->shortName($expected);

@@ -25,7 +25,12 @@ final readonly class DocblockExtractor
             throw new RuntimeException(sprintf('Could not read file for docblock extraction: %s', $file));
         }
 
-        $declaration = $this->symbolScanner->findNearestDeclaration($file, $line);
+        try {
+            $declaration = $this->symbolScanner->findNearestDeclaration($file, $line);
+        } catch (RuntimeException) {
+            return null;
+        }
+
         if ($declaration === null || $declaration['line'] < 1) {
             return null;
         }

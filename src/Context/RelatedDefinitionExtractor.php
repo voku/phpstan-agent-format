@@ -27,7 +27,12 @@ final readonly class RelatedDefinitionExtractor
             throw new RuntimeException(sprintf('Could not read file for related definition extraction: %s', $file));
         }
 
-        $declaration = $this->symbolScanner->findRelatedDeclaration($file, $line, $symbolContext);
+        try {
+            $declaration = $this->symbolScanner->findRelatedDeclaration($file, $line, $symbolContext);
+        } catch (RuntimeException) {
+            return null;
+        }
+
         if ($declaration === null || $declaration['line'] < 1) {
             return null;
         }
