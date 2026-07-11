@@ -8,6 +8,7 @@ use Voku\PhpstanAgentFormat\Dto\AgentIssue;
 use Voku\PhpstanAgentFormat\Dto\CodeSnippet;
 use Voku\PhpstanAgentFormat\Dto\ContextTrace;
 use Voku\PhpstanAgentFormat\Dto\FileLocation;
+use Voku\PhpstanAgentFormat\Dto\RelatedDefinition;
 use Voku\PhpstanAgentFormat\Dto\FixHint;
 use Voku\PhpstanAgentFormat\Dto\SymbolContext;
 use Voku\PhpstanAgentFormat\Dto\TraceHop;
@@ -40,5 +41,11 @@ final class DtoTest
         /** @var array<string, mixed> $symbolContext */
         $symbolContext = $array['symbolContext'];
         TestCase::assertHasKey('expectedType', $symbolContext, 'Issue should expose structured symbol repair hints.');
+
+        $legacyRelatedDefinition = new RelatedDefinition('/tmp/a.php', 5, 'Foo::bar', 'method', ['public function bar(): void {'], ['Attr']);
+        TestCase::assertSame(null, $legacyRelatedDefinition->endLine, 'Related definition constructor should remain compatible with callers that omit endLine.');
+
+        $rangedRelatedDefinition = new RelatedDefinition('/tmp/a.php', 5, 'Foo::bar', 'method', ['public function bar(): void {'], ['Attr'], 8);
+        TestCase::assertSame(8, $rangedRelatedDefinition->toArray()['endLine'], 'Related definition serialization should include optional endLine when provided.');
     }
 }

@@ -13,11 +13,11 @@ final readonly class RelatedDefinition
     public function __construct(
         public string $file,
         public int $line,
-        public ?int $endLine,
         public string $symbol,
         public string $kind,
         public array $snippet,
         public array $attributes = [],
+        public ?int $endLine = null,
     ) {
     }
 
