@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "54a829bd1a9cfcf6c71c3f49b5f32dc9",
+    "content-hash": "ae4880ce2faa229d1d7382360e9193d4",
     "packages": [
         {
             "name": "doctrine/deprecations",
@@ -566,31 +566,34 @@
         },
         {
             "name": "voku/simple-cache",
-            "version": "5.0.0",
+            "version": "6.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/voku/simple-cache.git",
-                "reference": "71531e9a8f4bfb75a120a986ac12867af15c65be"
+                "reference": "c5d8b516d6780ae297adf4bcd7f87b0b81b8ccb3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/voku/simple-cache/zipball/71531e9a8f4bfb75a120a986ac12867af15c65be",
-                "reference": "71531e9a8f4bfb75a120a986ac12867af15c65be",
+                "url": "https://api.github.com/repos/voku/simple-cache/zipball/c5d8b516d6780ae297adf4bcd7f87b0b81b8ccb3",
+                "reference": "c5d8b516d6780ae297adf4bcd7f87b0b81b8ccb3",
                 "shasum": ""
             },
             "require": {
-                "php": ">=7.0.0",
-                "psr/simple-cache": "~1.0 || ~2.0"
+                "php": ">=8.0.0",
+                "psr/simple-cache": "~1.0 || ~2.0 || ~3.0"
             },
             "provide": {
-                "psr/simple-cache-implementation": "1.0"
+                "psr/simple-cache-implementation": "1.0|2.0|3.0"
             },
             "require-dev": {
-                "phpunit/phpunit": "~6.0 || ~7.0 || ~9.0"
+                "phpstan/phpstan": "^1.12 || ^2.0",
+                "phpunit/phpunit": "~6.0 || ~7.0 || ~9.0",
+                "predis/predis": "^1.1 || ^2.0 || ^3.0",
+                "symfony/var-exporter": "^5.4 || ^6.0 || ^7.0 || ^8.0"
             },
             "suggest": {
                 "predis/predis": "~1.1 || ~2.0 || ~3.0",
-                "symfony/var-exporter": "~3.0 || ~4.0 || ~5.0 || ~6.0 || ~7.0"
+                "symfony/var-exporter": "^5.4 || ~6.0 || ~7.0 || ~8.0"
             },
             "type": "library",
             "autoload": {
@@ -619,7 +622,7 @@
             ],
             "support": {
                 "issues": "https://github.com/voku/simple-cache/issues",
-                "source": "https://github.com/voku/simple-cache/tree/5.0.0"
+                "source": "https://github.com/voku/simple-cache/tree/6.1.0"
             },
             "funding": [
                 {
@@ -639,20 +642,20 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-10-29T13:00:29+00:00"
+            "time": "2026-04-24T00:48:22+00:00"
         },
         {
             "name": "voku/simple-php-code-parser",
-            "version": "0.21.0",
+            "version": "0.22.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/voku/Simple-PHP-Code-Parser.git",
-                "reference": "9a0a7455882bc014a49d56f5ad439ff175302475"
+                "reference": "415823360d2406e78c8e04ee9a7e3d60bedc80d9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/voku/Simple-PHP-Code-Parser/zipball/9a0a7455882bc014a49d56f5ad439ff175302475",
-                "reference": "9a0a7455882bc014a49d56f5ad439ff175302475",
+                "url": "https://api.github.com/repos/voku/Simple-PHP-Code-Parser/zipball/415823360d2406e78c8e04ee9a7e3d60bedc80d9",
+                "reference": "415823360d2406e78c8e04ee9a7e3d60bedc80d9",
                 "shasum": ""
             },
             "require": {
@@ -663,7 +666,7 @@
                 "phpdocumentor/reflection-docblock": "~5.3 || ~6.0",
                 "phpdocumentor/type-resolver": "~1.7.2 || ~2.0",
                 "phpstan/phpdoc-parser": "~2.0",
-                "voku/simple-cache": "~5.0"
+                "voku/simple-cache": "~6.0"
             },
             "require-dev": {
                 "phpstan/phpstan": "^2.0",
@@ -694,7 +697,7 @@
             ],
             "support": {
                 "issues": "https://github.com/voku/Simple-PHP-Code-Parser/issues",
-                "source": "https://github.com/voku/Simple-PHP-Code-Parser/tree/0.21.0"
+                "source": "https://github.com/voku/Simple-PHP-Code-Parser/tree/0.22.0"
             },
             "funding": [
                 {
@@ -710,7 +713,7 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2026-04-21T00:30:33+00:00"
+            "time": "2026-07-10T10:10:24+00:00"
         },
         {
             "name": "webmozart/assert",

@@ -7,7 +7,7 @@
     "php": "^8.2",
     "phpstan/phpstan": "^2.1",
     "helgesverre/toon": "^3.1.0",
-    "voku/simple-php-code-parser": "^0.21"
+    "voku/simple-php-code-parser": "^0.22"
   },
   "autoload": {
     "psr-4": {
