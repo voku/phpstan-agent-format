@@ -13,6 +13,7 @@ final readonly class RelatedDefinition
     public function __construct(
         public string $file,
         public int $line,
+        public ?int $endLine,
         public string $symbol,
         public string $kind,
         public array $snippet,
@@ -21,13 +22,14 @@ final readonly class RelatedDefinition
     }
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string,snippet:list<string>,attributes:list<string>}
+     * @return array{file:string,line:int,endLine:int|null,symbol:string,kind:string,snippet:list<string>,attributes:list<string>}
      */
     public function toArray(): array
     {
         return [
             'file' => $this->file,
             'line' => $this->line,
+            'endLine' => $this->endLine,
             'symbol' => $this->symbol,
             'kind' => $this->kind,
             'snippet' => $this->snippet,

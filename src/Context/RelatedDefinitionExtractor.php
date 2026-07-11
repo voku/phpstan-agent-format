@@ -40,6 +40,7 @@ final readonly class RelatedDefinitionExtractor
         return new RelatedDefinition(
             file: $declaration['file'] !== '' ? $declaration['file'] : $file,
             line: $declaration['line'],
+            endLine: $declaration['endLine'],
             symbol: $declaration['symbol'],
             kind: $declaration['kind'],
             snippet: [$this->redactor->redact($this->compactDeclaration($lines, $declaration['line']))],
