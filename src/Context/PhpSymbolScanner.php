@@ -25,7 +25,7 @@ final class PhpSymbolScanner
     private array $cache = [];
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}|null
+     * @return array{file:string,line:int,endLine:int|null,symbol:string,kind:string,attributes:list<string>}|null
      */
     public function findNearestDeclaration(string $file, int $line): ?array
     {
@@ -45,7 +45,7 @@ final class PhpSymbolScanner
     }
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}|null
+     * @return array{file:string,line:int,endLine:int|null,symbol:string,kind:string,attributes:list<string>}|null
      */
     public function findRelatedDeclaration(string $file, int $line, SymbolContext $symbolContext): ?array
     {
@@ -82,7 +82,10 @@ final class PhpSymbolScanner
             throw new RuntimeException(sprintf('Could not scan PHP symbols because file does not exist: %s', $file));
         }
 
-        $realPath = realpath($file) ?: $file;
+        $realPath = realpath($file);
+        if ($realPath === false) {
+            $realPath = $file;
+        }
         if (isset($this->cache[$realPath])) {
             $container = $this->cache[$realPath];
             unset($this->cache[$realPath]);
@@ -104,7 +107,7 @@ final class PhpSymbolScanner
     }
 
     /**
-     * @return list<array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}>
+     * @return list<array{file:string,line:int,endLine:int|null,symbol:string,kind:string,attributes:list<string>}>
      */
     private function declarations(string $file): array
     {
@@ -142,7 +145,7 @@ final class PhpSymbolScanner
     }
 
     /**
-     * @param list<array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}> $declarations
+     * @param list<array{file:string,line:int,endLine:int|null,symbol:string,kind:string,attributes:list<string>}> $declarations
      */
     private function appendClassLikeDeclarations(array &$declarations, BasePHPClass $class, string $kind): void
     {
@@ -151,6 +154,7 @@ final class PhpSymbolScanner
         $declarations[] = [
             'file' => $classFile,
             'line' => $class->line ?? 0,
+            'endLine' => $this->normalizeEndLine($class->line ?? 0, $class->endLine ?? null),
             'symbol' => $class->name,
             'kind' => $kind,
             'attributes' => $this->attributeLabels($class->attributes),
@@ -168,13 +172,14 @@ final class PhpSymbolScanner
     }
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}
+     * @return array{file:string,line:int,endLine:int|null,symbol:string,kind:string,attributes:list<string>}
      */
     private function declarationFromFunction(PHPFunction $function, string $kind, ?string $className = null): array
     {
         return [
             'file' => $function->file ?? '',
             'line' => $function->line ?? 0,
+            'endLine' => $this->normalizeEndLine($function->line ?? 0, $function->endLine ?? null),
             'symbol' => $className !== null ? $className . '::' . $function->name : $function->name,
             'kind' => $kind,
             'attributes' => $this->functionAttributeLabels($function),
@@ -182,13 +187,14 @@ final class PhpSymbolScanner
     }
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}
+     * @return array{file:string,line:int,endLine:int|null,symbol:string,kind:string,attributes:list<string>}
      */
     private function declarationFromProperty(PHPProperty $property, string $classFile, string $className): array
     {
         return [
             'file' => $property->file ?? $classFile,
             'line' => $property->line ?? 0,
+            'endLine' => $this->normalizeEndLine($property->line ?? 0, $property->endLine ?? null),
             'symbol' => $className . '::$' . $property->name,
             'kind' => 'property',
             'attributes' => $this->attributeLabels($property->attributes),
@@ -196,19 +202,29 @@ final class PhpSymbolScanner
     }
 
     /**
-     * @return array{file:string,line:int,symbol:string,kind:string,attributes:list<string>}
+     * @return array{file:string,line:int,endLine:int|null,symbol:string,kind:string,attributes:list<string>}
      */
     private function declarationFromConstant(PHPConst $constant, string $classFile, ?string $className): array
     {
         return [
             'file' => $constant->file ?? $classFile,
             'line' => $constant->line ?? 0,
+            'endLine' => $this->normalizeEndLine($constant->line ?? 0, $constant->endLine ?? null),
             'symbol' => $className !== null ? $className . '::' . $constant->name : $constant->name,
             'kind' => 'constant',
             'attributes' => $this->attributeLabels($constant->attributes),
         ];
     }
 
+
+    private function normalizeEndLine(int $line, ?int $endLine): ?int
+    {
+        if ($endLine === null || $endLine < 1) {
+            return null;
+        }
+
+        return max($line, $endLine);
+    }
 
     /**
      * @param array<int|string, PHPAttribute> $attributes
@@ -295,11 +311,13 @@ final class PhpSymbolScanner
         $symbol = trim($symbol);
         if (str_contains($symbol, '::')) {
             $parts = explode('::', $symbol);
-            return end($parts) ?: $symbol;
+            $last = $parts[array_key_last($parts)];
+            return $last !== '' ? $last : $symbol;
         }
         if (str_contains($symbol, '\\')) {
             $parts = explode('\\', $symbol);
-            return end($parts) ?: $symbol;
+            $last = $parts[array_key_last($parts)];
+            return $last !== '' ? $last : $symbol;
         }
 
         return ltrim($symbol, '$');

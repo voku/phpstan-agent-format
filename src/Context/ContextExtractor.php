@@ -32,7 +32,7 @@ final readonly class ContextExtractor
         $lines = [];
 
         for ($i = $start; $i <= $end; $i++) {
-            $lineContent = (string) ($content[$i - 1] ?? '');
+            $lineContent = $content[$i - 1] ?? '';
             $lines[] = $this->redactor()->redact($lineContent);
         }
 

@@ -40,6 +40,7 @@ final readonly class RelatedDefinitionExtractor
         return new RelatedDefinition(
             file: $declaration['file'] !== '' ? $declaration['file'] : $file,
             line: $declaration['line'],
+            endLine: $declaration['endLine'],
             symbol: $declaration['symbol'],
             kind: $declaration['kind'],
             snippet: [$this->redactor->redact($this->compactDeclaration($lines, $declaration['line']))],
@@ -69,7 +70,7 @@ final readonly class RelatedDefinitionExtractor
     {
         $parts = [];
         for ($i = $line, $count = count($lines); $i <= $count && count($parts) < 6; $i++) {
-            $parts[] = trim((string) $lines[$i - 1]);
+            $parts[] = trim($lines[$i - 1]);
             $joined = trim(implode(' ', $parts));
             if (str_contains($joined, '{')) {
                 return trim(substr($joined, 0, (int) strpos($joined, '{') + 1));

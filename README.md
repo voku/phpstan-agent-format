@@ -205,7 +205,7 @@ vendor/bin/phpstan analyse --error-format=agent
 | `snippetLinesBefore` | `2` | Source context lines before the reported line |
 | `snippetLinesAfter` | `3` | Source context lines after the reported line |
 | `includeDocblock` | `false` | Includes the nearest relevant PHPDoc block for the reported symbol when available. |
-| `includeRelatedDefinition` | `true` | Includes a compact declaration snippet for the related class, method, function, property, or constant when it can be resolved safely. |
+| `includeRelatedDefinition` | `true` | Includes a compact declaration snippet plus parser-derived `line`/`endLine` range for the related class, method, function, property, or constant when it can be resolved safely. |
 | `tokenBudget` | `12000` | Cap report size; reduction is deterministic when exceeded |
 | `redactPatterns` | `[]` | Regex patterns to redact secrets from snippets |
 
@@ -231,17 +231,21 @@ When `includeDocblock` and `includeRelatedDefinition` are enabled, representativ
   "docblock": "/** Sends an email to a verified recipient. */",
   "relatedDefinition": {
     "file": "src/UserMailer.php",
-    "line": 17,
+    "line": 16,
+    "endLine": 20,
     "symbol": "UserMailer::send",
     "kind": "method",
     "snippet": [
-      "public function send(string $email): void"
+      "#[Route(path: '/send')] public function send(string $email): void"
+    ],
+    "attributes": [
+      "Route({\"path\":\"/send\"})"
     ]
   }
 }
 ```
 
-If a docblock or related declaration cannot be resolved conservatively, the corresponding enabled field is emitted as `null`. Both fields respect `redactPatterns` and the token-budget reducer may remove them before shrinking root-cause and repair-strategy summaries.
+`relatedDefinition.line` is the parser start line (including attributes when present), and `relatedDefinition.endLine` is the inclusive parser end line so agents can run commands like `sed -n '16,20p' src/UserMailer.php`. If a docblock or related declaration cannot be resolved conservatively, the corresponding enabled field is emitted as `null`. Both fields respect `redactPatterns` and the token-budget reducer may remove them before shrinking root-cause and repair-strategy summaries.
 
 ---
 

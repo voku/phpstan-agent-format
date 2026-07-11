@@ -152,7 +152,7 @@ PHP);
             }
             $lineOf = static function (string $needle) use ($fixtureLines): int {
                 foreach ($fixtureLines as $index => $line) {
-                    if (str_contains((string) $line, $needle)) {
+                    if (str_contains($line, $needle)) {
                         return $index + 1;
                     }
                 }
@@ -247,18 +247,26 @@ PHP);
             $functionDefinitionFound = false;
             $classDefinitionFound = false;
             foreach ($issues as $issue) {
-                /** @var array{kind:string,symbol:string,snippet:list<string>}|null $definition */
+                /** @var array{kind:string,symbol:string,line:int,endLine:int|null,snippet:list<string>}|null $definition */
                 $definition = $issue['relatedDefinition'];
                 if ($definition !== null && $definition['kind'] === 'method' && str_contains($definition['snippet'][0], 'public function send(')) {
+                    TestCase::assertSame($lineOf("#[ContextFixtureAttribute('method')]"), $definition['line'], 'Related method definitions should expose the parser start line including attributes.');
+                    TestCase::assertTrue($definition['endLine'] !== null && $definition['endLine'] > $definition['line'], 'Related method definitions should expose the parser end line for sed ranges.');
                     $methodDefinitionFound = true;
                 }
                 if ($definition !== null && $definition['kind'] === 'property' && str_contains($definition['snippet'][0], 'public string $email')) {
+                    TestCase::assertSame($lineOf("#[ContextFixtureAttribute('property')]"), $definition['line'], 'Related property definitions should expose the parser start line including attributes.');
+                    TestCase::assertTrue($definition['endLine'] !== null && $definition['endLine'] >= $definition['line'], 'Related property definitions should expose the parser end line for sed ranges.');
                     $propertyDefinitionFound = true;
                 }
                 if ($definition !== null && $definition['kind'] === 'function' && str_contains($definition['snippet'][0], 'function contextFixtureFunction(): string')) {
+                    TestCase::assertSame($lineOf("#[ContextFixtureAttribute('function')]"), $definition['line'], 'Related function definitions should expose the parser start line including attributes.');
+                    TestCase::assertTrue($definition['endLine'] !== null && $definition['endLine'] > $definition['line'], 'Related function definitions should expose the parser end line for sed ranges.');
                     $functionDefinitionFound = true;
                 }
                 if ($definition !== null && $definition['kind'] === 'class' && $definition['symbol'] === 'ContextFixtureMailer') {
+                    TestCase::assertSame($lineOf("#[ContextFixtureAttribute('class secret = class-secret')]"), $definition['line'], 'Related class definitions should expose the parser start line including attributes.');
+                    TestCase::assertTrue($definition['endLine'] !== null && $definition['endLine'] > $definition['line'], 'Related class definitions should expose the parser end line for sed ranges.');
                     $classDefinitionFound = true;
                 }
             }

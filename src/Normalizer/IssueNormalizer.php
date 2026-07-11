@@ -538,7 +538,12 @@ final readonly class IssueNormalizer
             return $default;
         }
 
-        $value = $object->{$method}();
+        $callable = [$object, $method];
+        if (!is_callable($callable)) {
+            return $default;
+        }
+
+        $value = $callable();
 
         return is_string($value) && $value !== '' ? $value : $default;
     }
@@ -554,7 +559,12 @@ final readonly class IssueNormalizer
             return null;
         }
 
-        $value = $object->{$method}();
+        $callable = [$object, $method];
+        if (!is_callable($callable)) {
+            return null;
+        }
+
+        $value = $callable();
 
         return is_string($value) && $value !== '' ? $value : null;
     }
@@ -565,7 +575,12 @@ final readonly class IssueNormalizer
             return null;
         }
 
-        $value = $object->{$method}();
+        $callable = [$object, $method];
+        if (!is_callable($callable)) {
+            return null;
+        }
+
+        $value = $callable();
 
         return is_int($value) ? $value : null;
     }
@@ -579,7 +594,12 @@ final readonly class IssueNormalizer
             return [];
         }
 
-        $value = $object->{$method}();
+        $callable = [$object, $method];
+        if (!is_callable($callable)) {
+            return [];
+        }
+
+        $value = $callable();
 
         return is_array($value) ? MetadataNormalizer::normalize($value) : [];
     }
