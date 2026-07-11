@@ -31,14 +31,10 @@ final class DtoTest
         );
 
         $array = $issue->toArray();
-        /** @var array<string, mixed> $array */
         TestCase::assertSame('i1', $array['id'], 'Issue id should be stable.');
         TestCase::assertHasKey('contextTrace', $array, 'Issue must include context trace.');
         TestCase::assertSame('root', $array['rootCauseSummary'], 'Issue root cause should be preserved.');
-        /** @var array{hops:list<array{kind:string}>} $contextTrace */
-        $contextTrace = $array['contextTrace'];
-        TestCase::assertSame('primary', $contextTrace['hops'][0]['kind'], 'Trace hops should expose stable hop kinds.');
-        /** @var array<string, mixed> $symbolContext */
+        TestCase::assertSame('primary', $array['contextTrace']['hops'][0]['kind'], 'Trace hops should expose stable hop kinds.');
         $symbolContext = $array['symbolContext'];
         TestCase::assertHasKey('expectedType', $symbolContext, 'Issue should expose structured symbol repair hints.');
 

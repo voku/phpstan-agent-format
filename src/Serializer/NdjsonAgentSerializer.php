@@ -19,10 +19,10 @@ final class NdjsonAgentSerializer implements AgentSerializerInterface
             'phpstanVersion' => $root['phpstanVersion'],
             'summary' => $root['summary'],
         ];
-        $lines[] = (string) json_encode($summary, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $lines[] = json_encode($summary, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
         foreach ($root['clusters'] as $cluster) {
-            $lines[] = (string) json_encode(['cluster' => $cluster], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+            $lines[] = json_encode(['cluster' => $cluster], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         }
 
         return implode("\n", $lines) . "\n";

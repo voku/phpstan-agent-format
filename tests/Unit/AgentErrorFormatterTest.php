@@ -152,7 +152,7 @@ PHP);
             }
             $lineOf = static function (string $needle) use ($fixtureLines): int {
                 foreach ($fixtureLines as $index => $line) {
-                    if (str_contains((string) $line, $needle)) {
+                    if (str_contains($line, $needle)) {
                         return $index + 1;
                     }
                 }

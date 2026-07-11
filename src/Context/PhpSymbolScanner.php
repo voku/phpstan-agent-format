@@ -82,7 +82,10 @@ final class PhpSymbolScanner
             throw new RuntimeException(sprintf('Could not scan PHP symbols because file does not exist: %s', $file));
         }
 
-        $realPath = realpath($file) ?: $file;
+        $realPath = realpath($file);
+        if ($realPath === false) {
+            $realPath = $file;
+        }
         if (isset($this->cache[$realPath])) {
             $container = $this->cache[$realPath];
             unset($this->cache[$realPath]);
@@ -308,11 +311,13 @@ final class PhpSymbolScanner
         $symbol = trim($symbol);
         if (str_contains($symbol, '::')) {
             $parts = explode('::', $symbol);
-            return end($parts) ?: $symbol;
+            $last = $parts[array_key_last($parts)];
+            return $last !== '' ? $last : $symbol;
         }
         if (str_contains($symbol, '\\')) {
             $parts = explode('\\', $symbol);
-            return end($parts) ?: $symbol;
+            $last = $parts[array_key_last($parts)];
+            return $last !== '' ? $last : $symbol;
         }
 
         return ltrim($symbol, '$');

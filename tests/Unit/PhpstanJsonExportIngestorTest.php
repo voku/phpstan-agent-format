@@ -54,14 +54,14 @@ final class PhpstanJsonExportIngestorTest
 
         $ingestor = new PhpstanJsonExportIngestor();
         $decodedFromArray = $ingestor->ingest($payload);
-        $decodedFromString = $ingestor->ingest((string) json_encode($payload, JSON_THROW_ON_ERROR));
+        $decodedFromString = $ingestor->ingest(json_encode($payload, JSON_THROW_ON_ERROR));
 
         TestCase::assertSame(1, count($decodedFromArray['fileSpecificErrors']), 'Only valid file-specific errors should be imported from array payloads.');
         TestCase::assertSame(['Top level error'], $decodedFromArray['notFileSpecificErrors'], 'Only non-empty top-level string errors should be imported.');
         TestCase::assertSame(1, count($decodedFromString['fileSpecificErrors']), 'String payloads should decode to the same valid file-specific errors.');
         TestCase::assertSame(['Top level error'], $decodedFromString['notFileSpecificErrors'], 'String payloads should decode to the same top-level errors.');
 
-        $noisyPayload = "PHPStan advisory preamble with {not-json} braces\n" . (string) json_encode($payload, JSON_THROW_ON_ERROR);
+        $noisyPayload = "PHPStan advisory preamble with {not-json} braces\n" . json_encode($payload, JSON_THROW_ON_ERROR);
         $decodedFromNoisyString = $ingestor->ingest($noisyPayload);
         TestCase::assertSame(1, count($decodedFromNoisyString['fileSpecificErrors']), 'Noisy string payloads should decode from the first JSON object line.');
         TestCase::assertSame(['Top level error'], $decodedFromNoisyString['notFileSpecificErrors'], 'Noisy string payloads should preserve top-level errors.');

@@ -11,6 +11,6 @@ final class JsonAgentSerializer implements AgentSerializerInterface
 {
     public function serialize(PresentationResult $presentation): string
     {
-        return (string) json_encode($presentation->toArray(), JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        return json_encode($presentation->toArray(), JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 }

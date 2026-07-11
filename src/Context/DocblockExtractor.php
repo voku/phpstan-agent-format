@@ -50,7 +50,7 @@ final readonly class DocblockExtractor
     {
         $i = $declarationLine - 1;
         while ($i >= 1) {
-            $trimmed = trim((string) $lines[$i - 1]);
+            $trimmed = trim($lines[$i - 1]);
             if ($trimmed === '' || str_starts_with($trimmed, '#[')) {
                 $i--;
                 continue;
@@ -58,7 +58,7 @@ final readonly class DocblockExtractor
             break;
         }
 
-        $candidate = $i >= 1 ? trim((string) $lines[$i - 1]) : '';
+        $candidate = $i >= 1 ? trim($lines[$i - 1]) : '';
         if (str_starts_with($candidate, '/**') && str_ends_with($candidate, '*/')) {
             return $candidate;
         }
@@ -69,7 +69,7 @@ final readonly class DocblockExtractor
 
         $end = $i;
         while ($i >= 1) {
-            if (str_starts_with(trim((string) $lines[$i - 1]), '/**')) {
+            if (str_starts_with(trim($lines[$i - 1]), '/**')) {
                 return implode("\n", array_slice($lines, $i - 1, $end - $i + 1));
             }
             $i--;
