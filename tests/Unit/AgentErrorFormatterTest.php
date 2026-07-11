@@ -260,6 +260,8 @@ PHP);
                     $propertyDefinitionFound = true;
                 }
                 if ($definition !== null && $definition['kind'] === 'function' && str_contains($definition['snippet'][0], 'function contextFixtureFunction(): string')) {
+                    TestCase::assertSame($lineOf("#[ContextFixtureAttribute('function')]"), $definition['line'], 'Related function definitions should expose the parser start line including attributes.');
+                    TestCase::assertTrue($definition['endLine'] !== null && $definition['endLine'] > $definition['line'], 'Related function definitions should expose the parser end line for sed ranges.');
                     $functionDefinitionFound = true;
                 }
                 if ($definition !== null && $definition['kind'] === 'class' && $definition['symbol'] === 'ContextFixtureMailer') {
