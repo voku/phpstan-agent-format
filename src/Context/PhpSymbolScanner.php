@@ -236,13 +236,37 @@ final class PhpSymbolScanner
         foreach ($attributes as $attribute) {
             $label = $attribute->name;
             if ($attribute->arguments !== []) {
-                $encoded = json_encode($attribute->arguments, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                $encoded = json_encode($this->normalizeAttributeArguments($attribute->arguments), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
                 $label .= '(' . $encoded . ')';
             }
             $labels[] = $prefix !== null ? $prefix . ': ' . $label : $label;
         }
 
         return $labels;
+    }
+
+    /**
+     * @param array<int|string, mixed> $arguments
+     * @return array<int|string, mixed>
+     */
+    private function normalizeAttributeArguments(array $arguments): array
+    {
+        $normalized = [];
+        foreach ($arguments as $key => $argument) {
+            if ($argument instanceof \UnitEnum) {
+                $normalized[$key] = $argument::class . '::' . $argument->name;
+                continue;
+            }
+
+            if (is_array($argument)) {
+                $normalized[$key] = $this->normalizeAttributeArguments($argument);
+                continue;
+            }
+
+            $normalized[$key] = $argument;
+        }
+
+        return $normalized;
     }
 
     /**

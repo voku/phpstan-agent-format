@@ -9,6 +9,7 @@ $tests = [
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\ClustererTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\IssueNormalizerTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\TokenBudgetReducerTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\PhpSymbolScannerTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\AgentErrorFormatterTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\PhpstanJsonExportIngestorTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\SerializerTest', 'run'],
