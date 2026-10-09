@@ -658,16 +658,16 @@
         },
         {
             "name": "voku/simple-php-code-parser",
-            "version": "0.22.12",
+            "version": "0.22.15",
             "source": {
                 "type": "git",
                 "url": "https://github.com/voku/Simple-PHP-Code-Parser.git",
-                "reference": "dc531d5dd00d3bce9dd91226976ab50608d200dd"
+                "reference": "08e2018bde2fad85026a090d0dd737a3cefb76b6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/voku/Simple-PHP-Code-Parser/zipball/dc531d5dd00d3bce9dd91226976ab50608d200dd",
-                "reference": "dc531d5dd00d3bce9dd91226976ab50608d200dd",
+                "url": "https://api.github.com/repos/voku/Simple-PHP-Code-Parser/zipball/08e2018bde2fad85026a090d0dd737a3cefb76b6",
+                "reference": "08e2018bde2fad85026a090d0dd737a3cefb76b6",
                 "shasum": ""
             },
             "require": {
@@ -709,7 +709,7 @@
             ],
             "support": {
                 "issues": "https://github.com/voku/Simple-PHP-Code-Parser/issues",
-                "source": "https://github.com/voku/Simple-PHP-Code-Parser/tree/0.22.12"
+                "source": "https://github.com/voku/Simple-PHP-Code-Parser/tree/0.22.15"
             },
             "funding": [
                 {
@@ -725,7 +725,7 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2026-10-05T06:23:50+00:00"
+            "time": "2026-10-09T09:16:13+00:00"
         },
         {
             "name": "webmozart/assert",
