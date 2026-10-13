@@ -87,9 +87,17 @@ final readonly class TokenBudgetReducer
             $estimated = $this->estimate($clusters, $notices);
         }
 
+        // 6. still over budget: drop trailing notices and report how many were suppressed.
+        $suppressedNotices = 0;
+        while ($estimated > $this->config->tokenBudget && $notices !== []) {
+            array_pop($notices);
+            $suppressedNotices++;
+            $estimated = $this->estimate($clusters, $notices);
+        }
+
         return $presentation
             ->withClusters($clusters, $this->suppressedDuplicates($clusters), new TokenStats($estimated, $this->config->tokenBudget, true))
-            ->withNotices($notices, new TokenStats($estimated, $this->config->tokenBudget, true));
+            ->withNotices($notices, new TokenStats($estimated, $this->config->tokenBudget, true), $suppressedNotices);
     }
 
     /**

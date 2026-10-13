@@ -96,6 +96,17 @@ final class PhpstanCliNoticesIntegrationTest
         TestCase::assertTrue($decoded['summary']['tokenStats']['wasReduced'], 'Notices must take part in token-budget reduction.');
         TestCase::assertSame('', $decoded['notices'][0]['message'], 'Over budget, notice message is dropped last.');
         TestCase::assertSame('Title n1', $decoded['notices'][0]['title'], 'Notice title survives reduction.');
+
+        $many = [];
+        for ($i = 0; $i < 30; $i++) {
+            $many[] = self::notice('m' . $i, 'Guidance ' . $i);
+        }
+        [$output] = self::analyse($root, $dir, 'Fixture/CleanRun.php', 'json', self::writeNotices($dir, $many), 'tokenBudget: 200');
+        $reduced = self::decode($output, 'json');
+        $shown = count($reduced['notices']);
+        TestCase::assertTrue($shown < 30, 'Notices beyond the budget must be dropped.');
+        TestCase::assertSame(30 - $shown, $reduced['summary']['suppressedNotices'], 'Dropped notices must be counted.');
+        TestCase::assertTrue($reduced['summary']['tokenStats']['estimatedTokens'] <= 200, 'Reduced report must fit the budget.');
     }
 
     private static function assertItpContextChangeNoticeFixtureIsRendered(string $root, string $dir): void
@@ -171,7 +182,7 @@ final class PhpstanCliNoticesIntegrationTest
 
     /**
      * @return array{
-     *   summary: array{totalIssues: int, notices: int, tokenStats: array{wasReduced: bool}},
+     *   summary: array{totalIssues: int, notices: int, suppressedNotices: int, tokenStats: array{wasReduced: bool, estimatedTokens: int}},
      *   clusters: list<array<mixed>>,
      *   noticesAdvisory: string,
      *   notices: list<array{id: string, title: string, message: string, subject: string|null, refs: list<string>}>
@@ -179,7 +190,7 @@ final class PhpstanCliNoticesIntegrationTest
      */
     private static function decode(string $output, string $mode): array
     {
-        /** @var array{summary: array{totalIssues: int, notices: int, tokenStats: array{wasReduced: bool}}, clusters: list<array<mixed>>, noticesAdvisory: string, notices: list<array{id: string, title: string, message: string, subject: string|null, refs: list<string>}>} $decoded */
+        /** @var array{summary: array{totalIssues: int, notices: int, suppressedNotices: int, tokenStats: array{wasReduced: bool, estimatedTokens: int}}, clusters: list<array<mixed>>, noticesAdvisory: string, notices: list<array{id: string, title: string, message: string, subject: string|null, refs: list<string>}>} $decoded */
         $decoded = $mode === 'toon' ? Toon::decode($output) : json_decode($output, true, 512, JSON_THROW_ON_ERROR);
 
         return $decoded;

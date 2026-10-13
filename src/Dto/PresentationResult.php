@@ -20,6 +20,7 @@ final readonly class PresentationResult
         public array $clusters,
         public TokenStats $tokenStats,
         public array $notices = [],
+        public int $suppressedNotices = 0,
     ) {
     }
 
@@ -32,7 +33,8 @@ final readonly class PresentationResult
      *         clusters: int,
      *         suppressedDuplicates: int,
      *         tokenStats: array{estimatedTokens: int, tokenBudget: int, wasReduced: bool},
-     *         notices?: int
+     *         notices?: int,
+     *         suppressedNotices?: int
      *     },
      *     clusters: list<array{
      *         clusterId: string,
@@ -79,6 +81,10 @@ final readonly class PresentationResult
             'clusters' => $clusters,
         ];
 
+        if ($this->suppressedNotices > 0) {
+            $result['summary']['suppressedNotices'] = $this->suppressedNotices;
+        }
+
         if ($this->notices === []) {
             return $result;
         }
@@ -103,13 +109,14 @@ final readonly class PresentationResult
             clusters: $clusters,
             tokenStats: $tokenStats,
             notices: $this->notices,
+            suppressedNotices: $this->suppressedNotices,
         );
     }
 
     /**
      * @param list<Notice> $notices
      */
-    public function withNotices(array $notices, TokenStats $tokenStats): self
+    public function withNotices(array $notices, TokenStats $tokenStats, int $suppressedNotices = 0): self
     {
         return new self(
             tool: $this->tool,
@@ -119,6 +126,7 @@ final readonly class PresentationResult
             clusters: $this->clusters,
             tokenStats: $tokenStats,
             notices: $notices,
+            suppressedNotices: $suppressedNotices,
         );
     }
 }
