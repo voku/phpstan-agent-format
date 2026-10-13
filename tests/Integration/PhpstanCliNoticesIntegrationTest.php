@@ -21,6 +21,7 @@ final class PhpstanCliNoticesIntegrationTest
             self::assertNoticeWithErrorKeepsErrorsAndExitCode($root, $dir);
             self::assertWarmCacheStillDeliversChangedNotices($root, $dir);
             self::assertNoticesAreRedactedAndBudgeted($root, $dir);
+            self::assertItpContextChangeNoticeFixtureIsRendered($root, $dir);
             self::assertInvalidNoticesFileFailsLoudly($root, $dir);
         } finally {
             self::removeDir($dir);
@@ -95,6 +96,18 @@ final class PhpstanCliNoticesIntegrationTest
         TestCase::assertTrue($decoded['summary']['tokenStats']['wasReduced'], 'Notices must take part in token-budget reduction.');
         TestCase::assertSame('', $decoded['notices'][0]['message'], 'Over budget, notice message is dropped last.');
         TestCase::assertSame('Title n1', $decoded['notices'][0]['title'], 'Notice title survives reduction.');
+    }
+
+    private static function assertItpContextChangeNoticeFixtureIsRendered(string $root, string $dir): void
+    {
+        // Produced by `itp-context-changes` for a modified annotated method; consumed here only as generic JSON.
+        [$output, $exitCode] = self::analyse($root, $dir, 'Fixture/CleanRun.php', 'json', $root . '/tests/Fixture/notices/itp-context-change.json');
+        $decoded = self::decode($output, 'json');
+
+        TestCase::assertSame(0, $exitCode, 'Change notices must stay advisory.');
+        TestCase::assertSame('ItpContextExample\\DashboardView', $decoded['notices'][0]['subject'], 'Modified annotated symbol should be reported.');
+        TestCase::assertTrue(str_contains($decoded['notices'][0]['message'], 'docs/adr/view-abstraction.md'), 'ADR guidance should reach the agent report.');
+        TestCase::assertSame(['docs/adr/view-abstraction.md', 'docs/ui/rendering.md'], $decoded['notices'][0]['refs'], 'Refs should be preserved.');
     }
 
     private static function assertInvalidNoticesFileFailsLoudly(string $root, string $dir): void
