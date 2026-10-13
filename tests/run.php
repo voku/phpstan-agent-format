@@ -16,6 +16,7 @@ $tests = [
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\FormatterIntegrationTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliBlindSpotMatrixTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliConfigIntegrationTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliNoticesIntegrationTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliIntegrationTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliFixtureMatrixTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanJsonExportIntegrationTest', 'run'],

@@ -25,6 +25,10 @@ final class NdjsonAgentSerializer implements AgentSerializerInterface
             $lines[] = json_encode(['cluster' => $cluster], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         }
 
+        foreach ($root['notices'] ?? [] as $notice) {
+            $lines[] = json_encode(['notice' => $notice], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        }
+
         return implode("\n", $lines) . "\n";
     }
 }

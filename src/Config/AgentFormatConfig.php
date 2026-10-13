@@ -21,6 +21,7 @@ final readonly class AgentFormatConfig
         public bool $includeRelatedDefinition,
         public int $tokenBudget,
         public array $redactPatterns,
+        public ?string $noticesFile = null,
     ) {
         if ($this->maxClusters < 1 || $this->maxIssuesPerCluster < 1) {
             throw new InvalidArgumentException('maxClusters and maxIssuesPerCluster must be >= 1.');
@@ -64,6 +65,7 @@ final readonly class AgentFormatConfig
             includeRelatedDefinition: self::boolValue($raw, 'includeRelatedDefinition', true),
             tokenBudget: max(1, self::intValue($raw, 'tokenBudget', 12000)),
             redactPatterns: $patterns,
+            noticesFile: self::nullableStringValue($raw, 'noticesFile'),
         );
     }
 
@@ -89,6 +91,16 @@ final readonly class AgentFormatConfig
         $value = $values[$key] ?? null;
 
         return \is_string($value) && $value !== '' ? $value : $default;
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     */
+    private static function nullableStringValue(array $values, string $key): ?string
+    {
+        $value = $values[$key] ?? null;
+
+        return \is_string($value) && $value !== '' ? $value : null;
     }
 
     /**

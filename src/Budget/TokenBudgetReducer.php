@@ -7,6 +7,7 @@ namespace Voku\PhpstanAgentFormat\Budget;
 use Voku\PhpstanAgentFormat\Config\AgentFormatConfig;
 use Voku\PhpstanAgentFormat\Dto\CodeSnippet;
 use Voku\PhpstanAgentFormat\Dto\IssueCluster;
+use Voku\PhpstanAgentFormat\Dto\Notice;
 use Voku\PhpstanAgentFormat\Dto\PresentationResult;
 use Voku\PhpstanAgentFormat\Dto\TokenStats;
 
@@ -19,8 +20,9 @@ final readonly class TokenBudgetReducer
     public function reduce(PresentationResult $presentation): PresentationResult
     {
         $clusters = $presentation->clusters;
+        $notices = $presentation->notices;
 
-        $estimated = $this->estimate($clusters);
+        $estimated = $this->estimate($clusters, $notices);
         if ($estimated <= $this->config->tokenBudget) {
             return $presentation->withClusters($clusters, $presentation->suppressedDuplicates, new TokenStats($estimated, $this->config->tokenBudget, false));
         }
@@ -31,7 +33,7 @@ final readonly class TokenBudgetReducer
             $cluster->suppressedDuplicateCount,
         ), $clusters);
 
-        $estimated = $this->estimate($clusters);
+        $estimated = $this->estimate($clusters, $notices);
 
         // 2. remove verbose secondary locations
         if ($estimated > $this->config->tokenBudget) {
@@ -48,7 +50,7 @@ final readonly class TokenBudgetReducer
         ), $clusters);
         }
 
-        $estimated = $this->estimate($clusters);
+        $estimated = $this->estimate($clusters, $notices);
 
         // 3. shrink snippets
         if ($estimated > $this->config->tokenBudget) {
@@ -61,7 +63,7 @@ final readonly class TokenBudgetReducer
 
                 return $cluster->withRepresentativeIssues($issues, $cluster->suppressedDuplicateCount);
             }, $clusters);
-            $estimated = $this->estimate($clusters);
+            $estimated = $this->estimate($clusters, $notices);
         }
 
         // 4. reduce representative issue count as needed.
@@ -76,20 +78,33 @@ final readonly class TokenBudgetReducer
 
                 return $cluster->withRepresentativeIssues($trimmed, $suppressed);
             }, $clusters);
-            $estimated = $this->estimate($clusters);
+            $estimated = $this->estimate($clusters, $notices);
         }
 
-        return $presentation->withClusters($clusters, $this->suppressedDuplicates($clusters), new TokenStats($estimated, $this->config->tokenBudget, true));
+        // 5. notices are advisory: drop their message text last, keeping id/title/subject/refs.
+        if ($estimated > $this->config->tokenBudget && $notices !== []) {
+            $notices = array_map(static fn (Notice $notice): Notice => $notice->withoutMessage(), $notices);
+            $estimated = $this->estimate($clusters, $notices);
+        }
+
+        return $presentation
+            ->withClusters($clusters, $this->suppressedDuplicates($clusters), new TokenStats($estimated, $this->config->tokenBudget, true))
+            ->withNotices($notices, new TokenStats($estimated, $this->config->tokenBudget, true));
     }
 
     /**
      * @param list<IssueCluster> $clusters
+     * @param list<Notice> $notices
      */
-    private function estimate(array $clusters): int
+    private function estimate(array $clusters, array $notices): int
     {
         $payload = [];
         foreach ($clusters as $cluster) {
             $payload[] = $cluster->toArray();
+        }
+
+        foreach ($notices as $notice) {
+            $payload[] = $notice->toArray();
         }
 
         return (int) max(1, ceil(strlen(json_encode($payload, JSON_THROW_ON_ERROR)) / 4));
