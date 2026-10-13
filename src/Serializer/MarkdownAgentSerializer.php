@@ -36,6 +36,19 @@ final class MarkdownAgentSerializer implements AgentSerializerInterface
             $lines[] = '';
         }
 
+        if (isset($root['notices'])) {
+            $lines[] = '## Architecture notices (advisory)';
+            $lines[] = PresentationResult::NOTICES_ADVISORY;
+            $lines[] = '';
+            foreach ($root['notices'] as $notice) {
+                $lines[] = sprintf('- `%s` %s: %s', $notice['subject'] ?? 'n/a', $notice['title'], $notice['message']);
+                foreach ($notice['refs'] as $ref) {
+                    $lines[] = sprintf('  - ref: %s', $ref);
+                }
+            }
+            $lines[] = '';
+        }
+
         return implode("\n", $lines) . "\n";
     }
 }

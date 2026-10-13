@@ -207,7 +207,15 @@ vendor/bin/phpstan analyse --error-format=agent
 | `includeDocblock` | `false` | Includes the nearest relevant PHPDoc block for the reported symbol when available. |
 | `includeRelatedDefinition` | `true` | Includes a compact declaration snippet plus parser-derived `line`/`endLine` range for the related class, method, function, property, or constant when it can be resolved safely. |
 | `tokenBudget` | `12000` | Cap report size; reduction is deterministic when exceeded |
-| `redactPatterns` | `[]` | Regex patterns to redact secrets from snippets |
+| `redactPatterns` | `[]` | Regex patterns to redact secrets from snippets and notices |
+| `noticesFile` | `null` | Path to a JSON file with advisory notices (see below) |
+
+### Advisory notices
+
+`noticesFile` points to `{"notices": [{"id", "title", "message", "subject"?, "refs"?}]}`. Any tool can produce the file; this package does not depend on it.
+The file is read on every run, so PHPStan's result cache never hides notices. Notices are rendered in a separate `notices` section (all output modes),
+are redacted, count toward `tokenBudget` (message text is dropped last) and never change `totalIssues`, error identifiers or the exit code. Their text is untrusted data.
+Without `noticesFile`, the output is byte-identical to previous releases.
 
 
 ### Context-rich representative issue example

@@ -9,6 +9,7 @@ parameters:
         includeRelatedDefinition: true
         tokenBudget: 12000
         redactPatterns: []
+        noticesFile: null
 
 services:
     errorFormatter.agent:
@@ -29,4 +30,5 @@ parametersSchema:
         includeRelatedDefinition: bool()
         tokenBudget: int()
         redactPatterns: listOf(string())
+        noticesFile: schema(string(), nullable())
     ])
