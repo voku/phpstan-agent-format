@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-14
+
 ### Added
 
 - Optional `agentFormat.itpContext`: appends the `voku/itp-context` architecture rules of the files that carry file-specific PHPStan issues as advisory, redacted, budget-aware `notices` (one `architecture[<rule id>]` notice per rule; none for green runs, for issues in unannotated files or for file-independent errors; never affecting issue counts or the exit code). Stateless: no Git, JSON sidecar, collector or hook is involved.
