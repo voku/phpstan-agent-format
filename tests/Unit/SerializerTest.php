@@ -64,8 +64,14 @@ final class SerializerTest
         TestCase::assertSame(2, $toon['summary']['totalIssues'], 'TOON serializer should preserve nested summary values.');
 
         $withNotice = new PresentationResult('phpstan-agent-format', '2.1.x', 0, 0, [], new TokenStats(5, 100, false), [
-            new Notice('n1', 'Protected change', 'Read the ADR.', 'Foo::bar', ['docs/adr/x.md']),
+            new Notice('n1', 'Protected change', 'Read the ADR.', 'Foo::bar', ['docs/adr/x.md', 'docs/adr/with "quotes".md']),
         ]);
+        $compactWithNotice = (new CompactTextAgentSerializer())->serialize($withNotice);
+        TestCase::assertTrue(
+            str_contains($compactWithNotice, 'refs=["docs/adr/x.md","docs/adr/with \\"quotes\\".md"]'),
+            'Compact notice output must retain ADR references with safe, unambiguous escaping.',
+        );
+
         foreach ([new NdjsonAgentSerializer(), new MarkdownAgentSerializer(), new CompactTextAgentSerializer(), new JsonAgentSerializer(), new ToonAgentSerializer()] as $serializer) {
             TestCase::assertTrue(str_contains($serializer->serialize($withNotice), 'Read the ADR.'), $serializer::class . ' must render notices.');
             TestCase::assertTrue(!str_contains($serializer->serialize($presentation), 'notice'), $serializer::class . ' must not mention notices without any.');

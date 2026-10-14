@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Voku\PhpstanAgentFormat\Dto;
 
+use InvalidArgumentException;
+
 /**
  * Advisory, non-error context attached to a report. Never counted as a PHPStan issue.
  */
@@ -26,6 +28,12 @@ final readonly class Notice
      */
     public function mapStrings(callable $transform): self
     {
+        // IDs are stable identifiers. Redacting them could merge distinct notices
+        // into the same ID, so reject sensitive IDs rather than emitting them.
+        if ($transform($this->id) !== $this->id) {
+            throw new InvalidArgumentException('Notice ID matches configured redaction patterns; use a non-sensitive stable identifier.');
+        }
+
         return new self(
             id: $this->id,
             title: $transform($this->title),

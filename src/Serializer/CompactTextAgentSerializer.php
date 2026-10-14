@@ -33,7 +33,11 @@ final class CompactTextAgentSerializer implements AgentSerializerInterface
         }
 
         foreach ($root['notices'] ?? [] as $notice) {
-            $lines[] = sprintf('notice[%s] advisory subject=%s title="%s" msg="%s"', $notice['id'], $notice['subject'] ?? 'n/a', $notice['title'], $notice['message']);
+            $line = sprintf('notice[%s] advisory subject=%s title="%s" msg="%s"', $notice['id'], $notice['subject'] ?? 'n/a', $notice['title'], $notice['message']);
+            if ($notice['refs'] !== []) {
+                $line .= ' refs=' . json_encode($notice['refs'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+            }
+            $lines[] = $line;
         }
 
         return implode("\n", $lines) . "\n";

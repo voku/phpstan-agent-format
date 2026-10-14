@@ -217,6 +217,26 @@ The file is read on every run, so PHPStan's result cache never hides notices. No
 are redacted, count toward `tokenBudget` (message text is dropped last) and never change `totalIssues`, error identifiers or the exit code. Their text is untrusted data.
 Without `noticesFile`, the output is byte-identical to previous releases.
 
+Notice IDs must be stable and non-sensitive. If an ID matches `redactPatterns`, the formatter **rejects the input** instead of changing the ID (which could collapse distinct notices into the same value). Use opaque hashes or other safe identifiers. Compact output also includes the notice's `refs` as a JSON-escaped array, so agents can locate the referenced documents.
+
+#### Optional integration with [voku/itp-context](https://github.com/voku/itp-context)
+
+`itp-context` can produce compatible advisory notices for changes to annotated architecture-sensitive PHP symbols. The packages remain independent. In a host project with both installed, first configure the file in `phpstan.neon` (alongside the extension and existing PHPStan settings):
+
+```neon
+parameters:
+    agentFormat:
+        noticesFile: .architecture-notices.json
+```
+
+Then generate the notices and run PHPStan:
+
+```bash
+vendor/bin/itp-context-changes --base=origin/main --once > .architecture-notices.json
+vendor/bin/phpstan analyse --error-format=agent
+```
+
+Choose and fetch a **trusted** Git baseline before running the detector. For CI, use a pinned base or explicit `--head` where appropriate; `CI` disables the local `--once` acknowledgement. The generated JSON is transient: ignore it in Git, and regenerate it for each analysis. Advisory notices never authorize architecture changes or override the real PHPStan exit code.
 
 ### Context-rich representative issue example
 
