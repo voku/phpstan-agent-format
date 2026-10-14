@@ -90,7 +90,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: voku/itp-context
-          ref: 5214515974fae3c4ca874ecdca46dc4e7c55ed12
+          ref: bc3fb0fda051a5fe653a6e5cd03e4070c52de7d7
           path: _integration/itp-context
           persist-credentials: false
 
