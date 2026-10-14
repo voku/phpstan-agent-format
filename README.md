@@ -221,19 +221,19 @@ Notice IDs must be stable and non-sensitive. If an ID matches `redactPatterns`, 
 
 #### Optional integration with [voku/itp-context](https://github.com/voku/itp-context)
 
-`itp-context` can produce compatible advisory notices for changes to annotated architecture-sensitive PHP symbols. The packages remain independent. In a host project with both installed:
-
-```bash
-vendor/bin/itp-context-changes --base=origin/main --once > .architecture-notices.json
-vendor/bin/phpstan analyse --error-format=agent
-```
-
-Configure the file in the host project's `phpstan.neon`:
+`itp-context` can produce compatible advisory notices for changes to annotated architecture-sensitive PHP symbols. The packages remain independent. In a host project with both installed, first configure the file in `phpstan.neon` (alongside the extension and existing PHPStan settings):
 
 ```neon
 parameters:
     agentFormat:
         noticesFile: .architecture-notices.json
+```
+
+Then generate the notices and run PHPStan:
+
+```bash
+vendor/bin/itp-context-changes --base=origin/main --once > .architecture-notices.json
+vendor/bin/phpstan analyse --error-format=agent
 ```
 
 Choose and fetch a **trusted** Git baseline before running the detector. For CI, use a pinned base or explicit `--head` where appropriate; `CI` disables the local `--once` acknowledgement. The generated JSON is transient: ignore it in Git, and regenerate it for each analysis. Advisory notices never authorize architecture changes or override the real PHPStan exit code.
