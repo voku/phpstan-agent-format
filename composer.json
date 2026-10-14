@@ -34,7 +34,7 @@
     }
   },
   "suggest": {
-    "voku/itp-context": "Required for agentFormat.itpContext: adds the architecture rules of the analysed files to the report"
+    "voku/itp-context": "^0.4, required for agentFormat.itpContext: adds the architecture rules of the files with PHPStan issues to the report"
   },
   "minimum-stability": "stable",
   "prefer-stable": true,
