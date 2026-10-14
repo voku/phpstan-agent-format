@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Voku\PhpstanAgentFormat\Tests\Unit;
 
+use InvalidArgumentException;
 use Voku\PhpstanAgentFormat\Dto\AgentIssue;
 use Voku\PhpstanAgentFormat\Dto\CodeSnippet;
 use Voku\PhpstanAgentFormat\Dto\ContextTrace;
 use Voku\PhpstanAgentFormat\Dto\FileLocation;
 use Voku\PhpstanAgentFormat\Dto\RelatedDefinition;
 use Voku\PhpstanAgentFormat\Dto\FixHint;
+use Voku\PhpstanAgentFormat\Dto\Notice;
 use Voku\PhpstanAgentFormat\Dto\SymbolContext;
 use Voku\PhpstanAgentFormat\Dto\TraceHop;
 use Voku\PhpstanAgentFormat\Tests\Support\TestCase;
@@ -43,5 +45,44 @@ final class DtoTest
 
         $rangedRelatedDefinition = new RelatedDefinition('/tmp/a.php', 5, 'Foo::bar', 'method', ['public function bar(): void {'], ['Attr'], 8);
         TestCase::assertSame(8, $rangedRelatedDefinition->toArray()['endLine'], 'Related definition serialization should include optional endLine when provided.');
+
+        $redact = static fn (string $value): string => str_replace(['secret-a', 'secret-b'], '[redacted]', $value);
+        $safeNotice = new Notice(
+            id: 'sha256:abc123',
+            title: 'secret-a title',
+            message: 'secret-b message',
+            subject: 'secret-a subject',
+            refs: ['docs/secret-b.md'],
+        );
+        $mappedNotice = $safeNotice->mapStrings($redact);
+        TestCase::assertSame('sha256:abc123', $mappedNotice->id, 'Opaque notice IDs must remain unchanged by redaction.');
+        TestCase::assertSame('[redacted] title', $mappedNotice->title, 'Notice titles should still be redacted.');
+        TestCase::assertSame('[redacted] message', $mappedNotice->message, 'Notice messages should still be redacted.');
+        TestCase::assertSame('[redacted] subject', $mappedNotice->subject, 'Notice subjects should still be redacted.');
+        TestCase::assertSame(['docs/[redacted].md'], $mappedNotice->refs, 'Notice refs should still be redacted.');
+        TestCase::assertSame(
+            $mappedNotice->toArray(),
+            $safeNotice->mapStrings($redact)->toArray(),
+            'Notice redaction must be deterministic across repeated runs.',
+        );
+
+        foreach (['secret-a', 'secret-b'] as $sensitiveId) {
+            $rejected = false;
+            try {
+                (new Notice($sensitiveId, 'title', 'message'))->mapStrings($redact);
+            } catch (InvalidArgumentException $exception) {
+                $rejected = true;
+                TestCase::assertSame(
+                    'Notice ID matches configured redaction patterns; use a non-sensitive stable identifier.',
+                    $exception->getMessage(),
+                    'Sensitive notice IDs should fail with the stable contract message.',
+                );
+            }
+
+            TestCase::assertTrue(
+                $rejected,
+                'Sensitive notice IDs that would redact to the same value must be rejected instead of colliding.',
+            );
+        }
     }
 }
