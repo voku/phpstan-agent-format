@@ -18,7 +18,7 @@ use Voku\PhpstanAgentFormat\Context\RelatedDefinitionExtractor;
 use Voku\PhpstanAgentFormat\Context\Redactor;
 use Voku\PhpstanAgentFormat\Context\PhpSymbolScanner;
 use Voku\PhpstanAgentFormat\Dto\Notice;
-use Voku\PhpstanAgentFormat\Ingestion\NoticeFileReader;
+use Voku\PhpstanAgentFormat\ItpContext\ArchitectureNoticeBuilder;
 use Voku\PhpstanAgentFormat\Normalizer\IssueNormalizer;
 use Voku\PhpstanAgentFormat\Serializer\CompactTextAgentSerializer;
 use Voku\PhpstanAgentFormat\Serializer\JsonAgentSerializer;
@@ -41,6 +41,7 @@ final class AgentErrorFormatter implements ErrorFormatter
         ?IssueClusterer $issueClusterer = null,
         ?TokenBudgetReducer $tokenBudgetReducer = null,
         ?AgentFormatConfig $config = null,
+        private readonly ArchitectureNoticeBuilder $architectureNotices = new ArchitectureNoticeBuilder(),
     ) {
         $this->config = $config ?? AgentFormatConfig::fromParameters($parameters);
         $symbolScanner = new PhpSymbolScanner();
@@ -62,7 +63,7 @@ final class AgentErrorFormatter implements ErrorFormatter
     public function formatErrors(AnalysisResult $analysisResult, Output $output): int
     {
         $serialized = $this->serializerForMode($this->config->outputMode)
-            ->serialize($this->presentationBuilder->buildFromAnalysisResult($analysisResult, $this->loadNotices()));
+            ->serialize($this->presentationBuilder->buildFromAnalysisResult($analysisResult, $this->architectureNotices($analysisResult)));
 
         $output->writeRaw($serialized);
 
@@ -75,23 +76,23 @@ final class AgentErrorFormatter implements ErrorFormatter
     public function formatPhpstanJsonExport(array|string $payload): string
     {
         return $this->serializerForMode($this->config->outputMode)
-            ->serialize($this->presentationBuilder->buildFromPhpstanJsonExport($payload, $this->loadNotices()));
+            ->serialize($this->presentationBuilder->buildFromPhpstanJsonExport($payload));
     }
 
     /**
-     * Read on every run (not cached) so PHPStan's result cache can never hide notices.
+     * Derived from the files PHPStan analysed in this run (result-cache aware), so nothing can go stale.
      *
      * @return list<Notice>
      */
-    private function loadNotices(): array
+    private function architectureNotices(AnalysisResult $analysisResult): array
     {
-        if ($this->config->noticesFile === null) {
+        if (!$this->config->itpContext) {
             return [];
         }
 
         return array_map(
             fn (Notice $notice): Notice => $notice->mapStrings($this->redactor->redact(...)),
-            (new NoticeFileReader())->read($this->config->noticesFile),
+            $this->architectureNotices->fromAnalysisResult($analysisResult),
         );
     }
 
