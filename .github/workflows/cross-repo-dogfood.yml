@@ -1,0 +1,45 @@
+name: Cross-repository advisory dogfood
+
+on:
+  pull_request:
+    paths:
+      - 'tests/cross-repo-dogfood.sh'
+      - '.github/workflows/cross-repo-dogfood.yml'
+      - 'src/**'
+      - 'extension.neon'
+      - 'composer.json'
+  workflow_dispatch:
+
+jobs:
+  cross-repo-dogfood:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout phpstan-agent-format
+        uses: actions/checkout@v7
+
+      - name: Checkout pinned itp-context producer
+        uses: actions/checkout@v7
+        with:
+          repository: voku/itp-context
+          ref: ab1474d443b0f5a277271b7ae560b1e0a820ba26
+          path: _integration/itp-context
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install formatter dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Install producer dependencies
+        run: composer install --working-dir=_integration/itp-context --no-dev --prefer-dist --no-interaction --no-progress
+
+      - name: Execute genuine notice producer and PHPStan consumer
+        run: bash tests/cross-repo-dogfood.sh
