@@ -23,6 +23,7 @@ final class PhpstanCliNoticesIntegrationTest
             self::assertNoticesAreRedactedAndBudgeted($root, $dir);
             self::assertItpContextChangeNoticeFixtureIsRendered($root, $dir);
             self::assertInvalidNoticesFileFailsLoudly($root, $dir);
+            self::assertSensitiveNoticeIdsFailClosed($root, $dir);
         } finally {
             self::removeDir($dir);
         }
@@ -130,6 +131,27 @@ final class PhpstanCliNoticesIntegrationTest
 
         TestCase::assertTrue($exitCode !== 0, 'An invalid notices file must not be silently ignored.');
         TestCase::assertTrue(str_contains($output, 'needs a non-empty string'), 'Error should explain the invalid notice.');
+    }
+
+    private static function assertSensitiveNoticeIdsFailClosed(string $root, string $dir): void
+    {
+        $redaction = "redactPatterns:\n            - 'secret=\\w+'";
+        $sensitive = self::writeNotices($dir, [
+            self::notice('secret=alpha', 'First guidance'),
+            self::notice('secret=beta', 'Second guidance'),
+        ]);
+
+        [$output, $exitCode] = self::analyse($root, $dir, 'Fixture/CleanRun.php', 'json', $sensitive, $redaction);
+        TestCase::assertTrue($exitCode !== 0, 'Sensitive notice IDs must be rejected rather than redacted into colliding IDs.');
+        TestCase::assertTrue(str_contains($output, 'Notice ID matches'), 'ID rejection must explain the invalid notice.');
+        TestCase::assertTrue(!str_contains($output, 'secret=alpha') && !str_contains($output, 'secret=beta'), 'The error itself must not leak sensitive IDs.');
+
+        $safe = self::writeNotices($dir, [self::notice('stable-123', 'Guidance with secret=gamma')]);
+        [$safeOutput, $safeExit] = self::analyse($root, $dir, 'Fixture/CleanRun.php', 'json', $safe, $redaction);
+        TestCase::assertSame(0, $safeExit, 'Stable, non-sensitive IDs remain valid.');
+        $decoded = self::decode($safeOutput, 'json');
+        TestCase::assertSame('stable-123', $decoded['notices'][0]['id'], 'Notice identity must not change due to redaction.');
+        TestCase::assertTrue(!str_contains($safeOutput, 'secret=gamma'), 'Guidance content must still be redacted.');
     }
 
     /**
