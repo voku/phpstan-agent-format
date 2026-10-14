@@ -66,6 +66,9 @@ final class SerializerTest
         $withNotice = new PresentationResult('phpstan-agent-format', '2.1.x', 0, 0, [], new TokenStats(5, 100, false), [
             new Notice('n1', 'Protected change', 'Read the ADR.', 'Foo::bar', ['docs/adr/x.md', 'docs/adr/with "quotes".md']),
         ]);
+        $withOpaqueNoticeId = new PresentationResult('phpstan-agent-format', '2.1.x', 0, 0, [], new TokenStats(5, 100, false), [
+            new Notice('sha256:abc123', 'Opaque ID', 'Safe notice.', null, []),
+        ]);
         $compactWithNotice = (new CompactTextAgentSerializer())->serialize($withNotice);
         TestCase::assertTrue(
             str_contains($compactWithNotice, 'refs=["docs/adr/x.md","docs/adr/with \\"quotes\\".md"]'),
@@ -73,7 +76,14 @@ final class SerializerTest
         );
 
         foreach ([new NdjsonAgentSerializer(), new MarkdownAgentSerializer(), new CompactTextAgentSerializer(), new JsonAgentSerializer(), new ToonAgentSerializer()] as $serializer) {
-            TestCase::assertTrue(str_contains($serializer->serialize($withNotice), 'Read the ADR.'), $serializer::class . ' must render notices.');
+            $serialized = $serializer->serialize($withNotice);
+            TestCase::assertTrue(str_contains($serialized, 'Read the ADR.'), $serializer::class . ' must render notices.');
+            TestCase::assertSame($serialized, $serializer->serialize($withNotice), $serializer::class . ' notice output must be deterministic.');
+
+            $opaqueIdOutput = $serializer->serialize($withOpaqueNoticeId);
+            TestCase::assertTrue(str_contains($opaqueIdOutput, 'sha256:abc123'), $serializer::class . ' must preserve opaque notice IDs exactly.');
+            TestCase::assertSame($opaqueIdOutput, $serializer->serialize($withOpaqueNoticeId), $serializer::class . ' opaque notice output must be deterministic.');
+
             TestCase::assertTrue(!str_contains($serializer->serialize($presentation), 'notice'), $serializer::class . ' must not mention notices without any.');
         }
     }
