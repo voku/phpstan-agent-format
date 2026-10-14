@@ -49,16 +49,20 @@ final readonly class Notice
     }
 
     /**
-     * @return array{id:string,title:string,message:string,subject:string|null,refs:list<string>}
+     * @return array{id:string,title:string,message:string,subject?:string,refs:list<string>} `subject` is omitted when null
      */
     public function toArray(): array
     {
-        return [
+        $notice = [
             'id' => $this->id,
             'title' => $this->title,
             'message' => $this->message,
-            'subject' => $this->subject,
-            'refs' => $this->refs,
         ];
+        if ($this->subject !== null) {
+            $notice['subject'] = $this->subject;
+        }
+        $notice['refs'] = $this->refs;
+
+        return $notice;
     }
 }

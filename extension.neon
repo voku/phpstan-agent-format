@@ -9,9 +9,14 @@ parameters:
         includeRelatedDefinition: true
         tokenBudget: 12000
         redactPatterns: []
-        noticesFile: null
+        itpContext: false
 
 services:
+    -
+        class: Voku\PhpstanAgentFormat\Collector\AnalysedFileCollector
+        tags:
+            - phpstan.collector
+
     errorFormatter.agent:
         class: Voku\PhpstanAgentFormat\Formatter\AgentErrorFormatter
         arguments:
@@ -30,5 +35,5 @@ parametersSchema:
         includeRelatedDefinition: bool()
         tokenBudget: int()
         redactPatterns: listOf(string())
-        noticesFile: schema(string(), nullable())
+        itpContext: bool()
     ])

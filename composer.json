@@ -33,6 +33,9 @@
       ]
     }
   },
+  "suggest": {
+    "voku/itp-context": "Required for agentFormat.itpContext: adds the architecture rules of the analysed files to the report"
+  },
   "minimum-stability": "stable",
   "prefer-stable": true,
   "require-dev": {

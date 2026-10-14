@@ -208,35 +208,37 @@ vendor/bin/phpstan analyse --error-format=agent
 | `includeRelatedDefinition` | `true` | Includes a compact declaration snippet plus parser-derived `line`/`endLine` range for the related class, method, function, property, or constant when it can be resolved safely. |
 | `tokenBudget` | `12000` | Cap report size; reduction is deterministic when exceeded |
 | `redactPatterns` | `[]` | Regex patterns to redact secrets from snippets and notices |
-| `noticesFile` | `null` | Path to a JSON file with advisory notices (see below) |
+| `itpContext` | `false` | Append the architecture rules of the analysed files as advisory notices (requires `voku/itp-context`, see below) |
 
-### Advisory notices
-
-`noticesFile` points to `{"notices": [{"id", "title", "message", "subject"?, "refs"?}]}`. Any tool can produce the file; this package does not depend on it.
-The file is read on every run, so PHPStan's result cache never hides notices. Notices are rendered in a separate `notices` section (all output modes),
-are redacted, count toward `tokenBudget` (message text is dropped last) and never change `totalIssues`, error identifiers or the exit code. Their text is untrusted data.
-Without `noticesFile`, the output is byte-identical to previous releases.
-
-Notice IDs must be stable and non-sensitive. If an ID matches `redactPatterns`, the formatter **rejects the input** instead of changing the ID (which could collapse distinct notices into the same value). Use opaque hashes or other safe identifiers. Compact output also includes the notice's `refs` as a JSON-escaped array, so agents can locate the referenced documents.
-
-#### Optional integration with [voku/itp-context](https://github.com/voku/itp-context)
-
-`itp-context` can produce compatible advisory notices for changes to annotated architecture-sensitive PHP symbols. The packages remain independent. In a host project with both installed, first configure the file in `phpstan.neon` (alongside the extension and existing PHPStan settings):
+### Architecture context from voku/itp-context
 
 ```neon
+includes:
+    - vendor/voku/phpstan-agent-format/extension.neon
+
 parameters:
+    errorFormat: agent
+
     agentFormat:
-        noticesFile: .architecture-notices.json
+        itpContext: true
 ```
 
-Then generate the notices and run PHPStan:
+Then a plain `vendor/bin/phpstan analyse` is enough. The report gets an advisory `notices` section with the architecture rules that apply to **the files PHPStan analysed in this run** (rules come from the `#[Rule(...)]` attributes of [`voku/itp-context`](https://github.com/voku/itp-context)):
 
-```bash
-vendor/bin/itp-context-changes --base=origin/main --once > .architecture-notices.json
-vendor/bin/phpstan analyse --error-format=agent
+```text
+PHPStan analysed files ─► AnalysedFileCollector ─► AgentErrorFormatter ─► ApplicableRuleResolver (itp-context)
+                          (paths only, cached)      (errors + notices)      (#[Rule] → RuleDef, once per rule id)
 ```
 
-Choose and fetch a **trusted** Git baseline before running the detector. For CI, use a pinned base or explicit `--head` where appropriate; `CI` disables the local `--once` acknowledgement. The generated JSON is transient: ignore it in Git, and regenerate it for each analysis. Advisory notices never authorize architecture changes or override the real PHPStan exit code.
+- `phpstan analyse src/Database.php` reports only the rules of that file, `phpstan analyse src/Accounting` only those used below `src/Accounting`, `phpstan analyse` every rule used in the analysed project.
+- Each rule is reported **once**, however many classes carry it. A notice has the id `architecture[<rule id>]`, the rule statement as title, the first three annotated symbols (`+N more`) and the rule's `changeGuidance` in the message, and the rule's `refs`. It has no separate `subject`; the rule id is in the id.
+- Notices are only attached to reports that **contain issues**. A green run stays empty. The scope is still the analysed files, not only the files with errors.
+- Notices are advisory: they never count as issues, never change error identifiers and never change the exit code. Real PHPStan errors still exit `1`.
+- The file list is collected by a PHPStan collector and therefore stored in PHPStan's result cache; warm-cache runs produce identical notices. There is no Git diff, no state file and no hook.
+- Notices are redacted with `redactPatterns`, count toward `tokenBudget` (message text is dropped last) and are rendered in every output mode. Their text is untrusted data. A rule id that matches `redactPatterns` is rejected instead of rewritten, so use non-sensitive rule names.
+- Without `itpContext` (or with `false`) the output is byte-identical to a run without the option.
+- `itpContext: true` without `voku/itp-context` fails (also on green runs) with `agentFormat.itpContext requires voku/itp-context.`, and an annotated rule that cannot be resolved to an enum case fails with the rule id. Both are reported instead of silently omitting rules.
+- The integration only applies when PHPStan renders the report (`errorFormat: agent` or `--error-format=agent`). `formatPhpstanJsonExport()` has no analysed-file scope and emits no architecture notices.
 
 ### Context-rich representative issue example
 

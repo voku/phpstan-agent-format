@@ -76,3 +76,40 @@ jobs:
           set -e
           test "$status" -eq 1
           php -r '$payload = json_decode(file_get_contents("/tmp/phpstan-agent-reduced.json"), true, 512, JSON_THROW_ON_ERROR); if (($payload["summary"]["tokenStats"]["wasReduced"] ?? false) !== true) { fwrite(STDERR, "Expected reduced payload.\n"); exit(1); } if (($payload["summary"]["suppressedDuplicates"] ?? 0) < 1) { fwrite(STDERR, "Expected suppressed duplicates.\n"); exit(1); }'
+
+  itp-context-e2e:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Checkout pinned itp-context
+        uses: actions/checkout@v7
+        with:
+          repository: voku/itp-context
+          ref: bc3fb0fda051a5fe653a6e5cd03e4070c52de7d7
+          path: _integration/itp-context
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: |
+          composer install --prefer-dist --no-interaction --no-progress
+          composer install --working-dir=_integration/itp-context --no-dev --prefer-dist --no-interaction --no-progress
+
+      - name: Test (agentFormat.itpContext end to end)
+        run: composer test
+        env:
+          ITP_CONTEXT_DIR: ${{ github.workspace }}/_integration/itp-context
+          ITP_CONTEXT_REQUIRED: '1'

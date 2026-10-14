@@ -41,7 +41,7 @@ final class MarkdownAgentSerializer implements AgentSerializerInterface
             $lines[] = PresentationResult::NOTICES_ADVISORY;
             $lines[] = '';
             foreach ($root['notices'] as $notice) {
-                $lines[] = sprintf('- `%s` %s: %s', $notice['subject'] ?? 'n/a', $notice['title'], $notice['message']);
+                $lines[] = sprintf('- `%s` %s: %s', $notice['subject'] ?? $notice['id'], $notice['title'], $notice['message']);
                 foreach ($notice['refs'] as $ref) {
                     $lines[] = sprintf('  - ref: %s', $ref);
                 }

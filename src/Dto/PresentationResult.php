@@ -59,7 +59,7 @@ final readonly class PresentationResult
      *         suppressedDuplicateCount: int
      *     }>,
      *     noticesAdvisory?: string,
-     *     notices?: list<array{id: string, title: string, message: string, subject: string|null, refs: list<string>}>
+     *     notices?: list<array{id: string, title: string, message: string, subject?: string, refs: list<string>}>
      * }
      */
     public function toArray(): array
