@@ -12,11 +12,6 @@ parameters:
         itpContext: false
 
 services:
-    -
-        class: Voku\PhpstanAgentFormat\Collector\AnalysedFileCollector
-        tags:
-            - phpstan.collector
-
     errorFormatter.agent:
         class: Voku\PhpstanAgentFormat\Formatter\AgentErrorFormatter
         arguments:
