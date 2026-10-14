@@ -7,6 +7,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-15
+
+### Fixed
+
+- Added regression coverage for advisory notice redaction: stable opaque notice IDs remain unchanged, sensitive IDs fail closed before redaction can collapse distinct IDs, and all supported serializers preserve deterministic notice output.
+
 ## [0.3.0] - 2026-10-14
 
 ### Added
