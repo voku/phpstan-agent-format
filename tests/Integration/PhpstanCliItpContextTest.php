@@ -38,10 +38,11 @@ final class PhpstanCliItpContextTest
                 return;
             }
 
+            self::assertGreenRunHasNoNotices($root, $dir);
             self::assertFullRunReportsEachRuleOnce($root, $dir);
             self::assertScopeFollowsAnalysedFiles($root, $dir);
             self::assertWarmCacheKeepsNoticesAndScope($root, $dir);
-            self::assertNoticesNeverChangeExitCodeButErrorsDo($root, $dir);
+            self::assertNoticesNeverChangeExitCode($root, $dir);
             self::assertDisabledIntegrationAddsNothing($root, $dir);
         } finally {
             exec('rm -rf ' . escapeshellarg($dir));
@@ -54,28 +55,38 @@ final class PhpstanCliItpContextTest
             return; // package is a dev dependency here, the failure mode cannot be reproduced
         }
 
+        // Green run on purpose: a misconfiguration must not hide until the first error.
         [$output, $exit] = self::analyse($root, $dir, ['Plain.php'], false, true, 'missing');
 
         TestCase::assertTrue($exit !== 0, 'itpContext without the package must not pass silently.');
         TestCase::assertTrue(str_contains($output, 'agentFormat.itpContext requires voku/itp-context.'), 'Error must name the missing package.');
     }
 
+    private static function assertGreenRunHasNoNotices(string $root, string $dir): void
+    {
+        [$output, $exit] = self::analyse($root, $dir, [''], true, true, 'green');
+
+        TestCase::assertSame(0, $exit, 'A green run stays green.');
+        TestCase::assertTrue(!str_contains($output, 'architecture[') && !isset(self::decode($output)['notices']), 'A run without issues gets no architecture notices.');
+    }
+
     private static function assertFullRunReportsEachRuleOnce(string $root, string $dir): void
     {
-        [$output, $exit] = self::analyse($root, $dir, [''], true, true, 'full');
+        [$output, $exit] = self::analyse($root, $dir, ['', '../MethodOnString.php'], true, true, 'full');
         $report = self::decode($output);
 
-        TestCase::assertSame(0, $exit, 'Architecture notices alone must exit 0.');
+        TestCase::assertSame(1, $exit, 'The real PHPStan error decides the exit code.');
+        TestCase::assertTrue($report['summary']['totalIssues'] >= 1, 'The real error is reported.');
         TestCase::assertSame([self::DATABASE, self::MAIL], array_column($report['notices'] ?? [], 'id'), 'Full run: Database and Mail, each exactly once.');
-        TestCase::assertSame(0, $report['summary']['totalIssues'], 'Notices are not PHPStan issues.');
-        TestCase::assertSame(2, $report['summary']['notices'], 'Summary counts the two rule notices.');
+        TestCase::assertSame(2, $report['summary']['notices'] ?? null, 'Summary counts the two rule notices separately from issues.');
 
-        $database = ($report['notices'] ?? [])[0];
-        TestCase::assertSame('Use the database abstraction.', $database['title'], 'Title is the rule statement.');
-        TestCase::assertSame(['docs/adr/database.md'], $database['refs'], 'Refs come from the rule definition.');
+        $database = $report['notices'][0] ?? [];
+        TestCase::assertSame('Use the database abstraction.', $database['title'] ?? null, 'Title is the rule statement.');
+        TestCase::assertSame(['docs/adr/database.md'], $database['refs'] ?? null, 'Refs come from the rule definition.');
+        TestCase::assertSame(null, $database['subject'] ?? null, 'The rule id lives in the notice id only.');
         TestCase::assertSame(
             "Applies to: Voku\\PhpstanAgentFormat\\Tests\\Fixture\\ItpContext\\Bar, Voku\\PhpstanAgentFormat\\Tests\\Fixture\\ItpContext\\Foo\nWhen changing: Read docs/adr/database.md first.",
-            $database['message'],
+            $database['message'] ?? null,
             'Two annotated classes still produce one notice listing both.',
         );
     }
@@ -85,39 +96,26 @@ final class PhpstanCliItpContextTest
         TestCase::assertSame([self::DATABASE], self::noticeIds($root, $dir, ['Foo.php']), 'Analysing Foo.php reports only its rule.');
         TestCase::assertSame([self::MAIL], self::noticeIds($root, $dir, ['Mailer.php']), 'Analysing Mailer.php reports only its rule.');
         TestCase::assertSame([self::DATABASE], self::noticeIds($root, $dir, ['Foo.php', 'Bar.php']), 'Two files with the same rule give one notice.');
-
-        [$plain] = self::analyse($root, $dir, ['Plain.php'], true, true, 'scope');
-        TestCase::assertTrue(!str_contains($plain, 'architecture['), 'A file without rules gets no architecture notice.');
-        TestCase::assertTrue(!isset(self::decode($plain)['notices']), 'No notices section at all for an unannotated file.');
-    }
-
-    /**
-     * @param list<string> $paths
-     * @return list<string>
-     */
-    private static function noticeIds(string $root, string $dir, array $paths): array
-    {
-        return array_column(self::decode(self::analyse($root, $dir, $paths, true, true, 'scope')[0])['notices'] ?? [], 'id');
+        TestCase::assertSame([], self::noticeIds($root, $dir, ['Plain.php']), 'A file without rules gets no architecture notice, even next to a real error.');
     }
 
     private static function assertWarmCacheKeepsNoticesAndScope(string $root, string $dir): void
     {
-        [$cold] = self::analyse($root, $dir, [''], true, true, 'warm');
-        [$warm] = self::analyse($root, $dir, [''], true, true, 'warm');
+        [$cold] = self::analyse($root, $dir, ['', '../MethodOnString.php'], true, true, 'warm');
+        [$warm] = self::analyse($root, $dir, ['', '../MethodOnString.php'], true, true, 'warm');
         TestCase::assertSame($cold, $warm, 'A warm PHPStan result cache must yield identical architecture notices.');
 
-        [$subset] = self::analyse($root, $dir, ['Mailer.php'], true, true, 'warm');
-        TestCase::assertSame([self::MAIL], array_column(self::decode($subset)['notices'] ?? [], 'id'), 'A narrower run on a populated cache is scoped to its own files.');
+        TestCase::assertSame([self::MAIL], self::noticeIds($root, $dir, ['Mailer.php'], 'warm'), 'A narrower run on a populated cache is scoped to its own files.');
     }
 
-    private static function assertNoticesNeverChangeExitCodeButErrorsDo(string $root, string $dir): void
+    private static function assertNoticesNeverChangeExitCode(string $root, string $dir): void
     {
-        [$output, $exit] = self::analyse($root, $dir, ['Foo.php', '../MethodOnString.php'], true, true, 'exit');
-        $report = self::decode($output);
+        [$withIntegration, $exitOn] = self::analyse($root, $dir, ['Foo.php', '../MethodOnString.php'], true, true, 'exit');
+        [, $exitOff] = self::analyse($root, $dir, ['Foo.php', '../MethodOnString.php'], true, false, 'exit');
 
-        TestCase::assertSame(1, $exit, 'A real PHPStan error plus a notice must still exit 1.');
-        TestCase::assertTrue($report['summary']['totalIssues'] >= 1, 'The real error is reported.');
-        TestCase::assertSame([self::DATABASE], array_column($report['notices'] ?? [], 'id'), 'The notice is reported next to the error.');
+        TestCase::assertSame(1, $exitOn, 'A real PHPStan error plus a notice must exit 1.');
+        TestCase::assertSame($exitOff, $exitOn, 'The integration does not change the exit code.');
+        TestCase::assertSame(1, self::decode($withIntegration)['summary']['notices'] ?? null, 'The notice is reported next to the error.');
     }
 
     private static function assertDisabledIntegrationAddsNothing(string $root, string $dir): void
@@ -128,6 +126,19 @@ final class PhpstanCliItpContextTest
         TestCase::assertSame($omitted, $explicit, 'itpContext: false must be byte-identical to omitting the option.');
         TestCase::assertTrue(!str_contains($omitted, 'architecture[') && !str_contains($omitted, 'notices'), 'Without the integration the report has no notices.');
         TestCase::assertSame(1, $omittedExit, 'The real error still fails.');
+    }
+
+    /**
+     * Notice ids of a run that also contains a real PHPStan error, so notices are attached at all.
+     *
+     * @param list<string> $paths
+     * @return list<string>
+     */
+    private static function noticeIds(string $root, string $dir, array $paths, string $cache = 'scope'): array
+    {
+        $report = self::decode(self::analyse($root, $dir, [...$paths, '../MethodOnString.php'], true, true, $cache)[0]);
+
+        return array_column($report['notices'] ?? [], 'id');
     }
 
     /**
@@ -177,13 +188,13 @@ final class PhpstanCliItpContextTest
 
     /**
      * @return array{
-     *   summary: array{totalIssues: int, notices: int},
-     *   notices?: list<array{id: string, title: string, message: string, subject: string|null, refs: list<string>}>
+     *   summary: array{totalIssues: int, notices?: int},
+     *   notices?: list<array{id: string, title: string, message: string, subject?: string, refs: list<string>}>
      * }
      */
     private static function decode(string $output): array
     {
-        /** @var array{summary: array{totalIssues: int, notices: int}, notices?: list<array{id: string, title: string, message: string, subject: string|null, refs: list<string>}>} $decoded */
+        /** @var array{summary: array{totalIssues: int, notices?: int}, notices?: list<array{id: string, title: string, message: string, subject?: string, refs: list<string>}>} $decoded */
         $decoded = json_decode($output, true, 512, JSON_THROW_ON_ERROR);
 
         return $decoded;

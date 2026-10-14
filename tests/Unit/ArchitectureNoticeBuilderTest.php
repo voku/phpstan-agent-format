@@ -68,7 +68,8 @@ final class ArchitectureNoticeBuilderTest
     private static function assertFormatterOnlyAddsNoticesWhenEnabled(): void
     {
         $GLOBALS['ITP_CONTEXT_STUB_RULES'] = ['/p/Foo.php' => [new ApplicableRule('R::Database', 'S', null, [], ['App\\Foo'])]];
-        $result = self::result(['/p/Foo.php']);
+        $result = self::result(['/p/Foo.php'], ['a PHPStan error']);
+        $green = self::result(['/p/Foo.php']);
 
         $render = static function (array $agentFormat) use ($result): array {
             $output = new \PHPStan\Command\Output();
@@ -84,17 +85,25 @@ final class ArchitectureNoticeBuilderTest
         TestCase::assertSame($disabled, $explicit, 'itpContext: false must equal omitting the option.');
         TestCase::assertTrue(!str_contains($disabled, 'notice'), 'Disabled integration must not mention notices.');
         TestCase::assertTrue(str_contains($enabled, 'architecture[R::Database]'), 'Enabled integration renders the rule notice.');
-        TestCase::assertSame(0, $disabledExit + $enabledExit, 'Architecture notices never change the exit code.');
+        TestCase::assertSame($disabledExit, $enabledExit, 'Architecture notices never change the exit code.');
+        TestCase::assertSame(1, $enabledExit, 'The real error still fails.');
+
+        $greenOutput = new \PHPStan\Command\Output();
+        $greenExit = (new AgentErrorFormatter(['agentFormat' => ['outputMode' => 'json', 'itpContext' => true]]))->formatErrors($green, $greenOutput);
+        TestCase::assertSame(0, $greenExit, 'A green run stays green.');
+        TestCase::assertTrue(!str_contains($greenOutput->buffer, 'architecture['), 'A green run gets no architecture notices.');
+        TestCase::assertTrue(!str_contains($enabled, '"subject"') || !str_contains($enabled, 'R::Database"'), 'Architecture notices do not repeat the rule id as subject.');
 
         unset($GLOBALS['ITP_CONTEXT_STUB_RULES']);
     }
 
     /**
      * @param list<string> $files
+     * @param list<string> $errors
      */
-    private static function result(array $files): AnalysisResult
+    private static function result(array $files, array $errors = []): AnalysisResult
     {
-        return new AnalysisResult([], [], array_map(
+        return new AnalysisResult([], $errors, array_map(
             static fn (string $file): CollectedData => new CollectedData([$file], $file, AnalysedFileCollector::class),
             $files,
         ));

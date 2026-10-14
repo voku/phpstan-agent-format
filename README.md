@@ -231,12 +231,13 @@ PHPStan analysed files ─► AnalysedFileCollector ─► AgentErrorFormatter �
 ```
 
 - `phpstan analyse src/Database.php` reports only the rules of that file, `phpstan analyse src/Accounting` only those used below `src/Accounting`, `phpstan analyse` every rule used in the analysed project.
-- Each rule is reported **once**, however many classes carry it. A notice has the id `architecture[<rule id>]`, the rule statement as title, the first three annotated symbols (`+N more`) and the rule's `changeGuidance` in the message, and the rule's `refs`.
+- Each rule is reported **once**, however many classes carry it. A notice has the id `architecture[<rule id>]`, the rule statement as title, the first three annotated symbols (`+N more`) and the rule's `changeGuidance` in the message, and the rule's `refs`. It has no separate `subject`; the rule id is in the id.
+- Notices are only attached to reports that **contain issues**. A green run stays empty. The scope is still the analysed files, not only the files with errors.
 - Notices are advisory: they never count as issues, never change error identifiers and never change the exit code. Real PHPStan errors still exit `1`.
 - The file list is collected by a PHPStan collector and therefore stored in PHPStan's result cache; warm-cache runs produce identical notices. There is no Git diff, no state file and no hook.
 - Notices are redacted with `redactPatterns`, count toward `tokenBudget` (message text is dropped last) and are rendered in every output mode. Their text is untrusted data. A rule id that matches `redactPatterns` is rejected instead of rewritten, so use non-sensitive rule names.
 - Without `itpContext` (or with `false`) the output is byte-identical to a run without the option.
-- `itpContext: true` without `voku/itp-context` fails with `agentFormat.itpContext requires voku/itp-context.`, and an annotated rule that cannot be resolved to an enum case fails with the rule id. Both are reported instead of silently omitting rules.
+- `itpContext: true` without `voku/itp-context` fails (also on green runs) with `agentFormat.itpContext requires voku/itp-context.`, and an annotated rule that cannot be resolved to an enum case fails with the rule id. Both are reported instead of silently omitting rules.
 - The integration only applies when PHPStan renders the report (`errorFormat: agent` or `--error-format=agent`). `formatPhpstanJsonExport()` has no analysed-file scope and emits no architecture notices.
 
 ### Context-rich representative issue example

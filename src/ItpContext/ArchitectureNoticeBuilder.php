@@ -20,14 +20,19 @@ final class ArchitectureNoticeBuilder
 
     public const MISSING_PACKAGE_MESSAGE = 'agentFormat.itpContext requires voku/itp-context.';
 
+    public function assertAvailable(): void
+    {
+        if (!class_exists(ApplicableRuleResolver::class)) {
+            throw new RuntimeException(self::MISSING_PACKAGE_MESSAGE);
+        }
+    }
+
     /**
      * @return list<Notice>
      */
     public function fromAnalysisResult(AnalysisResult $analysisResult): array
     {
-        if (!class_exists(ApplicableRuleResolver::class)) {
-            throw new RuntimeException(self::MISSING_PACKAGE_MESSAGE);
-        }
+        $this->assertAvailable();
 
         $files = [];
         foreach ($analysisResult->getCollectedData() as $collected) {
@@ -59,7 +64,6 @@ final class ArchitectureNoticeBuilder
             id: 'architecture[' . $rule->ruleId . ']',
             title: $rule->statement,
             message: $message,
-            subject: $rule->ruleId,
             refs: $rule->refs,
         );
     }

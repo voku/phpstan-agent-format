@@ -81,12 +81,20 @@ final class AgentErrorFormatter implements ErrorFormatter
 
     /**
      * Derived from the files PHPStan analysed in this run (result-cache aware), so nothing can go stale.
+     * Only attached to reports that contain issues: a green run has nothing to repair.
      *
      * @return list<Notice>
      */
     private function architectureNotices(AnalysisResult $analysisResult): array
     {
         if (!$this->config->itpContext) {
+            return [];
+        }
+
+        // A misconfiguration must be loud on green runs too, not only once the first error appears.
+        $this->architectureNotices->assertAvailable();
+
+        if (!$analysisResult->hasErrors()) {
             return [];
         }
 
