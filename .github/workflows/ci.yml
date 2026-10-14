@@ -85,6 +85,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Checkout pinned itp-context
         uses: actions/checkout@v7
