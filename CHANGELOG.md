@@ -9,7 +9,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
-- Optional `agentFormat.itpContext`: appends the `voku/itp-context` architecture rules of the files analysed in the run as advisory, redacted, budget-aware `notices` (one `architecture[<rule id>]` notice per rule, only attached to reports that contain issues, never affecting issue counts or the exit code). The scope comes from the new `AnalysedFileCollector`, so it is stateless and result-cache safe; no Git, JSON sidecar or hook is involved.
+- Optional `agentFormat.itpContext`: appends the `voku/itp-context` architecture rules of the files that carry file-specific PHPStan issues as advisory, redacted, budget-aware `notices` (one `architecture[<rule id>]` notice per rule; none for green runs, for issues in unannotated files or for file-independent errors; never affecting issue counts or the exit code). Stateless: no Git, JSON sidecar, collector or hook is involved.
 
 ## [0.2.1] - 2026-07-30
 

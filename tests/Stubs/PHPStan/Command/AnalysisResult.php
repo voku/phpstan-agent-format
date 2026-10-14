@@ -13,12 +13,10 @@ final class AnalysisResult
     /**
      * @param list<object> $fileSpecificErrors
      * @param list<object|string> $notFileSpecificErrors
-     * @param list<\PHPStan\Collectors\CollectedData> $collectedData
      */
     public function __construct(
         private array $fileSpecificErrors,
         private array $notFileSpecificErrors = [],
-        private array $collectedData = [],
     ) {
     }
 
@@ -36,14 +34,6 @@ final class AnalysisResult
     public function getNotFileSpecificErrors(): array
     {
         return $this->notFileSpecificErrors;
-    }
-
-    /**
-     * @return list<\PHPStan\Collectors\CollectedData>
-     */
-    public function getCollectedData(): array
-    {
-        return $this->collectedData;
     }
 
     public function hasErrors(): bool

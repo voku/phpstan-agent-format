@@ -80,8 +80,8 @@ final class AgentErrorFormatter implements ErrorFormatter
     }
 
     /**
-     * Derived from the files PHPStan analysed in this run (result-cache aware), so nothing can go stale.
-     * Only attached to reports that contain issues: a green run has nothing to repair.
+     * Derived from the files that carry file-specific PHPStan issues in this very report, so nothing can go stale
+     * and a green run or a file-independent error gets no architecture context.
      *
      * @return list<Notice>
      */
@@ -94,7 +94,7 @@ final class AgentErrorFormatter implements ErrorFormatter
         // A misconfiguration must be loud on green runs too, not only once the first error appears.
         $this->architectureNotices->assertAvailable();
 
-        if (!$analysisResult->hasErrors()) {
+        if ($analysisResult->getFileSpecificErrors() === []) {
             return [];
         }
 

@@ -8,11 +8,10 @@ use ItpContext\Model\ApplicableRule;
 use ItpContext\Service\ApplicableRuleResolver;
 use PHPStan\Command\AnalysisResult;
 use RuntimeException;
-use Voku\PhpstanAgentFormat\Collector\AnalysedFileCollector;
 use Voku\PhpstanAgentFormat\Dto\Notice;
 
 /**
- * Turns the architecture rules of the analysed files into one advisory notice per rule id.
+ * Turns the architecture rules of the files that carry PHPStan issues into one advisory notice per rule id.
  */
 final class ArchitectureNoticeBuilder
 {
@@ -35,9 +34,15 @@ final class ArchitectureNoticeBuilder
         $this->assertAvailable();
 
         $files = [];
-        foreach ($analysisResult->getCollectedData() as $collected) {
-            if ($collected->getCollectorType() === AnalysedFileCollector::class) {
-                $files[$collected->getFilePath()] = true;
+        foreach ($analysisResult->getFileSpecificErrors() as $error) {
+            // The analysed file and the file the error sits in (they differ for errors reported inside traits).
+            foreach ([
+                method_exists($error, 'getFile') ? $error->getFile() : null,
+                method_exists($error, 'getFilePath') ? $error->getFilePath() : null,
+            ] as $file) {
+                if (is_string($file) && $file !== '') {
+                    $files[$file] = true;
+                }
             }
         }
         $files = array_keys($files);

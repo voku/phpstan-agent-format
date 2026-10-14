@@ -208,7 +208,7 @@ vendor/bin/phpstan analyse --error-format=agent
 | `includeRelatedDefinition` | `true` | Includes a compact declaration snippet plus parser-derived `line`/`endLine` range for the related class, method, function, property, or constant when it can be resolved safely. |
 | `tokenBudget` | `12000` | Cap report size; reduction is deterministic when exceeded |
 | `redactPatterns` | `[]` | Regex patterns to redact secrets from snippets and notices |
-| `itpContext` | `false` | Append the architecture rules of the analysed files as advisory notices (requires `voku/itp-context`, see below) |
+| `itpContext` | `false` | Append the architecture rules of the files that carry PHPStan issues as advisory notices (requires `voku/itp-context`, see below) |
 
 ### Architecture context from voku/itp-context
 
@@ -223,22 +223,20 @@ parameters:
         itpContext: true
 ```
 
-Then a plain `vendor/bin/phpstan analyse` is enough. The report gets an advisory `notices` section with the architecture rules that apply to **the files PHPStan analysed in this run** (rules come from the `#[Rule(...)]` attributes of [`voku/itp-context`](https://github.com/voku/itp-context)):
+Then a plain `vendor/bin/phpstan analyse` is enough. The report gets an advisory `notices` section with the architecture rules of **the files in which PHPStan reports issues** (rules come from the `#[Rule(...)]` attributes of [`voku/itp-context`](https://github.com/voku/itp-context)). The formatter is a repair report, not an architecture index:
 
 ```text
-PHPStan analysed files ─► AnalysedFileCollector ─► AgentErrorFormatter ─► ApplicableRuleResolver (itp-context)
-                          (paths only, cached)      (errors + notices)      (#[Rule] → RuleDef, once per rule id)
+file-specific PHPStan issues ─► their files (deduplicated) ─► ApplicableRuleResolver (itp-context) ─► one notice per rule id
 ```
 
-- `phpstan analyse src/Database.php` reports only the rules of that file, `phpstan analyse src/Accounting` only those used below `src/Accounting`, `phpstan analyse` every rule used in the analysed project.
-- Each rule is reported **once**, however many classes carry it. A notice has the id `architecture[<rule id>]`, the rule statement as title, the first three annotated symbols (`+N more`) and the rule's `changeGuidance` in the message, and the rule's `refs`. It has no separate `subject`; the rule id is in the id.
-- Notices are only attached to reports that **contain issues**. A green run stays empty. The scope is still the analysed files, not only the files with errors.
+- A green run gets no notices. An issue in a file without `#[Rule]` gets none either, and neither does a file-independent PHPStan error (for example an unmatched `ignoreErrors` pattern). A full `phpstan analyse` with one issue in `TokenParser.php` reports only the rules of `TokenParser.php`, not every rule of the project.
+- Each rule is reported **once**, however many files with issues carry it. A notice has the id `architecture[<rule id>]`, the rule statement as title, the first three annotated symbols of the affected files (`+N more`) and the rule's `changeGuidance` in the message, and the rule's `refs`. It has no separate `subject`; the rule id is in the id.
 - Notices are advisory: they never count as issues, never change error identifiers and never change the exit code. Real PHPStan errors still exit `1`.
-- The file list is collected by a PHPStan collector and therefore stored in PHPStan's result cache; warm-cache runs produce identical notices. There is no Git diff, no state file and no hook.
+- The notices are computed from the errors of the report itself, so warm-cache runs produce identical notices. There is no Git diff, no state file, no collector and no hook.
 - Notices are redacted with `redactPatterns`, count toward `tokenBudget` (message text is dropped last) and are rendered in every output mode. Their text is untrusted data. A rule id that matches `redactPatterns` is rejected instead of rewritten, so use non-sensitive rule names.
 - Without `itpContext` (or with `false`) the output is byte-identical to a run without the option.
 - `itpContext: true` without `voku/itp-context` fails (also on green runs) with `agentFormat.itpContext requires voku/itp-context.`, and an annotated rule that cannot be resolved to an enum case fails with the rule id. Both are reported instead of silently omitting rules.
-- The integration only applies when PHPStan renders the report (`errorFormat: agent` or `--error-format=agent`). `formatPhpstanJsonExport()` has no analysed-file scope and emits no architecture notices.
+- The integration only applies when PHPStan renders the report (`errorFormat: agent` or `--error-format=agent`). `formatPhpstanJsonExport()` has no `AnalysisResult` and emits no architecture notices.
 
 ### Context-rich representative issue example
 
