@@ -67,6 +67,11 @@ final class ArchitectureNoticeBuilderTest
             $ids(new AnalysisResult([new FakeError('/p/Foo.php', '/p/Trait.php')], [])),
             'An error reported in a trait resolves the rules of both files.',
         );
+        TestCase::assertSame(
+            ['architecture[R::Database]', 'architecture[R::Trait]'],
+            $ids(new AnalysisResult([new FakeError('Trait display label', '/p/Foo.php', '/p/Trait.php')], [])),
+            'The trait source path must contribute rules even when getFile() is only a display label.',
+        );
     }
 
     private static function assertFormatterOnlyAddsNoticesWhenEnabledAndIssuesExist(): void
@@ -116,8 +121,11 @@ final class ArchitectureNoticeBuilderTest
  */
 final class FakeError
 {
-    public function __construct(private string $file, private string $filePath)
-    {
+    public function __construct(
+        private string $file,
+        private string $filePath,
+        private ?string $traitFilePath = null,
+    ) {
     }
 
     public function getFile(): string
@@ -128,6 +136,11 @@ final class FakeError
     public function getFilePath(): string
     {
         return $this->filePath;
+    }
+
+    public function getTraitFilePath(): ?string
+    {
+        return $this->traitFilePath;
     }
 
     public function getMessage(): string
