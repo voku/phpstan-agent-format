@@ -132,6 +132,15 @@ final class ArchitectureNoticeBuilderTest
         TestCase::assertTrue(!str_contains($redacted, 'Gone::Rule'), 'The failure notice is redacted.');
         unset($GLOBALS['ITP_CONTEXT_STUB_FAILURE']);
 
+        // Autoloading a half-edited file throws an Error (ParseError), not an Exception. That must not hide the report either.
+        $GLOBALS['ITP_CONTEXT_STUB_FAILURE'] = new \ParseError('syntax error, unexpected end of file');
+        [$errorOutput, $errorExit] = $render([]);
+        $decoded = self::decode($errorOutput);
+        TestCase::assertSame(1, $errorExit, 'An Error from the rule resolver does not change the exit code.');
+        TestCase::assertSame(1, $decoded['summary']['totalIssues'], 'The real issue is still reported when the resolver raises an Error.');
+        TestCase::assertSame(['architecture[unavailable]'], array_column($decoded['notices'], 'id'), 'An Error becomes the same advisory notice.');
+        unset($GLOBALS['ITP_CONTEXT_STUB_FAILURE']);
+
         // A rule id matching redactPatterns is never rewritten: it is dropped and counted instead of aborting the report.
         $GLOBALS['ITP_CONTEXT_STUB_RULES'] = [
             '/p/Foo.php' => [

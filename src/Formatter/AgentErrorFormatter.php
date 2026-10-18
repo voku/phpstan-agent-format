@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Voku\PhpstanAgentFormat\Formatter;
 
-use Exception;
 use InvalidArgumentException;
+use Throwable;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
@@ -101,9 +101,10 @@ final class AgentErrorFormatter implements ErrorFormatter
         }
 
         // Architecture context is advisory: whatever goes wrong while building it must never hide the real PHPStan issues.
+        // Throwable, not Exception: autoloading a half-edited rule enum raises a ParseError.
         try {
             $notices = $this->architectureNotices->fromAnalysisResult($analysisResult);
-        } catch (Exception $exception) {
+        } catch (Throwable $exception) {
             $notices = [new Notice(
                 id: 'architecture[unavailable]',
                 title: 'Architecture context unavailable',
