@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-18
+
+### Fixed
+
+- `agentFormat.itpContext`: errors reported inside a trait now also resolve the rules of the trait's source file (`getTraitFilePath()`), even when `getFile()` is only a display label and `getFilePath()` names the using class.
+- `agentFormat.itpContext`: a broken architecture context can no longer abort the report. An unresolvable rule becomes one advisory `architecture[unavailable]` notice, and a rule id matching `redactPatterns` is dropped and counted in an `architecture[omitted]` notice; all PHPStan issues and the exit code stay unchanged. A missing `voku/itp-context` remains a loud configuration error.
+
 ## [0.3.1] - 2026-10-15
 
 ### Fixed

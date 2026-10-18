@@ -25,7 +25,7 @@ namespace ItpContext\Model {
 namespace ItpContext\Service {
     if (!class_exists(ApplicableRuleResolver::class)) {
         /**
-         * Test double for voku/itp-context. The `ITP_CONTEXT_STUB_RULES` global maps file => list<ApplicableRule>.
+         * Test double for voku/itp-context. The `ITP_CONTEXT_STUB_RULES` global maps file => list<ApplicableRule>; `ITP_CONTEXT_STUB_FAILURE` makes it throw.
          */
         final class ApplicableRuleResolver
         {
@@ -35,6 +35,11 @@ namespace ItpContext\Service {
              */
             public function resolveFiles(iterable $files): array
             {
+                $failure = $GLOBALS['ITP_CONTEXT_STUB_FAILURE'] ?? null;
+                if ($failure instanceof \Throwable) {
+                    throw $failure;
+                }
+
                 /** @var array<string, list<\ItpContext\Model\ApplicableRule>> $byFile */
                 $byFile = $GLOBALS['ITP_CONTEXT_STUB_RULES'] ?? [];
                 $rules = [];
