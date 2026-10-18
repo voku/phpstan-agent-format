@@ -49,6 +49,7 @@ final class PhpstanCliItpContextTest
             self::assertIssuesInUnannotatedFilesMeanNoNotices($root, $dir);
             self::assertIssuesSelectTheirRules($root, $dir);
             self::assertTraitIssuesSelectTraitRule($root, $dir);
+            self::assertBrokenArchitectureContextNeverHidesRealIssues($root, $dir);
             self::assertFileIndependentErrorsCarryNoNotices($root, $dir);
             self::assertWarmCacheIsIdentical($root, $dir);
             self::assertNoticesNeverChangeExitCode($root, $dir);
@@ -147,6 +148,24 @@ final class PhpstanCliItpContextTest
         return self::analyse($root, $dir, [...self::GREEN, ...$broken], true, true, 'select');
     }
 
+    private static function assertBrokenArchitectureContextNeverHidesRealIssues(string $root, string $dir): void
+    {
+        // A rule whose enum does not exist cannot be resolved. The report must survive and still carry the real issues.
+        [$output, $exit] = self::analyse($root, $dir, [...self::GREEN, 'ItpContextBroken/UnresolvableRule.php', 'ItpContextBroken/DbBroken.php'], true, true, 'unresolvable');
+        $report = self::decode($output);
+
+        TestCase::assertSame(1, $exit, 'The real PHPStan errors decide the exit code.');
+        TestCase::assertTrue($report['summary']['totalIssues'] >= 2, 'The real issues are reported even though a rule cannot be resolved.');
+        TestCase::assertSame(['architecture[unavailable]'], self::ids($output), 'The unresolvable rule becomes one advisory notice instead of aborting the report.');
+        TestCase::assertTrue(str_contains($report['notices'][0]['message'] ?? '', 'NoSuchRules::Database'), 'The notice names the rule that could not be resolved.');
+
+        // A rule id that matches redactPatterns is dropped and counted, not rewritten and not fatal.
+        [$redacted, $redactedExit] = self::analyse($root, $dir, [...self::GREEN, 'ItpContextBroken/DbBroken.php', 'ItpContextBroken/MailBroken.php'], true, true, 'sensitive', '', "redactPatterns:\n            - 'Rules.{2}Database'");
+        TestCase::assertSame(1, $redactedExit, 'A sensitive rule id does not change the exit code.');
+        TestCase::assertSame([self::MAIL, 'architecture[omitted]'], self::ids($redacted), 'The safe notice stays and the sensitive one is replaced by an omitted marker.');
+        TestCase::assertTrue(!str_contains($redacted, 'Rules::Database'), 'The sensitive rule id never reaches the report.');
+    }
+
     private static function assertFileIndependentErrorsCarryNoNotices(string $root, string $dir): void
     {
         // An unmatched ignoreErrors pattern is reported by PHPStan as an error without a file (full analysis only).
@@ -205,7 +224,7 @@ final class PhpstanCliItpContextTest
      * @param list<string> $paths relative to tests/Fixture
      * @return array{0: string, 1: int}
      */
-    private static function analyse(string $root, string $dir, array $paths, bool $withBootstrap, ?bool $itpContext, string $cache, string $extraParameters = ''): array
+    private static function analyse(string $root, string $dir, array $paths, bool $withBootstrap, ?bool $itpContext, string $cache, string $extraParameters = '', string $agentFormatExtra = ''): array
     {
         $fixtures = $root . '/tests/Fixture';
         $lines = [
@@ -229,6 +248,9 @@ final class PhpstanCliItpContextTest
         }
         $lines[] = '    agentFormat:';
         $lines[] = '        outputMode: json';
+        if ($agentFormatExtra !== '') {
+            $lines[] = '        ' . $agentFormatExtra;
+        }
         if ($itpContext !== null) {
             $lines[] = '        itpContext: ' . ($itpContext ? 'true' : 'false');
         }

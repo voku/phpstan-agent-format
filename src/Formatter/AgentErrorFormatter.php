@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Voku\PhpstanAgentFormat\Formatter;
 
+use Exception;
+use InvalidArgumentException;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
@@ -98,10 +100,37 @@ final class AgentErrorFormatter implements ErrorFormatter
             return [];
         }
 
-        return array_map(
-            fn (Notice $notice): Notice => $notice->mapStrings($this->redactor->redact(...)),
-            $this->architectureNotices->fromAnalysisResult($analysisResult),
-        );
+        // Architecture context is advisory: whatever goes wrong while building it must never hide the real PHPStan issues.
+        try {
+            $notices = $this->architectureNotices->fromAnalysisResult($analysisResult);
+        } catch (Exception $exception) {
+            $notices = [new Notice(
+                id: 'architecture[unavailable]',
+                title: 'Architecture context unavailable',
+                message: $exception->getMessage(),
+            )];
+        }
+
+        $redacted = [];
+        $omitted = 0;
+        foreach ($notices as $notice) {
+            try {
+                $redacted[] = $notice->mapStrings($this->redactor->redact(...));
+            } catch (InvalidArgumentException) {
+                // Notice IDs are never rewritten (that could merge distinct notices); a sensitive one is dropped and counted.
+                $omitted++;
+            }
+        }
+
+        if ($omitted > 0) {
+            $redacted[] = new Notice(
+                id: 'architecture[omitted]',
+                title: 'Architecture notices omitted',
+                message: sprintf('%d architecture notice(s) omitted because their rule id matches redactPatterns.', $omitted),
+            );
+        }
+
+        return $redacted;
     }
 
     private function serializerForMode(string $mode): AgentSerializerInterface

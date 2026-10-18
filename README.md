@@ -235,7 +235,8 @@ file-specific PHPStan issues ─► their files (deduplicated) ─► Applicable
 - The notices are computed from the errors of the report itself, so warm-cache runs produce identical notices. There is no Git diff, no state file, no collector and no hook.
 - Notices are redacted with `redactPatterns`, count toward `tokenBudget` (message text is dropped last) and are rendered in every output mode. Their text is untrusted data. A rule id that matches `redactPatterns` is rejected instead of rewritten, so use non-sensitive rule names.
 - Without `itpContext` (or with `false`) the output is byte-identical to a run without the option.
-- `itpContext: true` without `voku/itp-context` fails (also on green runs) with `agentFormat.itpContext requires voku/itp-context.`, and an annotated rule that cannot be resolved to an enum case fails with the rule id. Both are reported instead of silently omitting rules.
+- `itpContext: true` without `voku/itp-context` is a configuration error and fails loudly (also on green runs) with `agentFormat.itpContext requires voku/itp-context.`.
+- Architecture context never hides real PHPStan issues. If a rule cannot be resolved (for example its enum is not autoloadable), the report still contains all issues and gets one `architecture[unavailable]` notice with the reason. A rule id that matches `redactPatterns` is never rewritten: that notice is dropped and counted in one `architecture[omitted]` notice. The exit code is unaffected in both cases.
 - The integration only applies when PHPStan renders the report (`errorFormat: agent` or `--error-format=agent`). `formatPhpstanJsonExport()` has no `AnalysisResult` and emits no architecture notices.
 
 ### Context-rich representative issue example

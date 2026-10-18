@@ -19,6 +19,7 @@ final class ArchitectureNoticeBuilderTest
         self::assertSubjectsAreTruncated();
         self::assertOnlyFilesWithIssuesAreResolved();
         self::assertFormatterOnlyAddsNoticesWhenEnabledAndIssuesExist();
+        self::assertBrokenArchitectureContextNeverHidesRealIssues();
     }
 
     private static function assertRulesBecomeOneNoticeEach(): void
@@ -105,6 +106,57 @@ final class ArchitectureNoticeBuilderTest
         TestCase::assertTrue(!str_contains($global, 'architecture['), 'A file-independent error gets no architecture notices.');
 
         unset($GLOBALS['ITP_CONTEXT_STUB_RULES']);
+    }
+
+    private static function assertBrokenArchitectureContextNeverHidesRealIssues(): void
+    {
+        $withIssue = self::result(['/p/Foo.php']);
+        $render = static function (array $agentFormat) use ($withIssue): array {
+            $output = new Output();
+            $exit = (new AgentErrorFormatter(['agentFormat' => ['outputMode' => 'json', 'itpContext' => true] + $agentFormat]))->formatErrors($withIssue, $output);
+
+            return [$output->buffer, $exit];
+        };
+
+        // An unresolvable rule: the report must still contain the real issue and the exit code must be unchanged.
+        $GLOBALS['ITP_CONTEXT_STUB_FAILURE'] = new \RuntimeException('Rule "Gone::Rule" cannot be resolved.');
+        [$output, $exit] = $render([]);
+        $decoded = self::decode($output);
+        TestCase::assertSame(1, $exit, 'A failing rule resolver does not change the exit code.');
+        TestCase::assertSame(1, $decoded['summary']['totalIssues'], 'The real issue is still reported.');
+        TestCase::assertSame(['architecture[unavailable]'], array_column($decoded['notices'], 'id'), 'The failure becomes one advisory notice.');
+        TestCase::assertSame('Rule "Gone::Rule" cannot be resolved.', $decoded['notices'][0]['message'], 'The notice says what went wrong.');
+
+        // The failure text is redacted like any other notice text.
+        [$redacted] = $render(['redactPatterns' => ['Gone::\\w+']]);
+        TestCase::assertTrue(!str_contains($redacted, 'Gone::Rule'), 'The failure notice is redacted.');
+        unset($GLOBALS['ITP_CONTEXT_STUB_FAILURE']);
+
+        // A rule id matching redactPatterns is never rewritten: it is dropped and counted instead of aborting the report.
+        $GLOBALS['ITP_CONTEXT_STUB_RULES'] = [
+            '/p/Foo.php' => [
+                new ApplicableRule('Secret\\Rules::Alpha', 'S', null, [], ['App\\Foo']),
+                new ApplicableRule('Plain\\Rules::Beta', 'S', null, [], ['App\\Foo']),
+            ],
+        ];
+        [$partial, $partialExit] = $render(['redactPatterns' => ['Secret\\\\Rules::\\w+']]);
+        $decoded = self::decode($partial);
+        TestCase::assertSame(1, $partialExit, 'A sensitive rule id does not change the exit code.');
+        TestCase::assertSame(1, $decoded['summary']['totalIssues'], 'The real issue is still reported.');
+        TestCase::assertSame(['architecture[Plain\\Rules::Beta]', 'architecture[omitted]'], array_column($decoded['notices'], 'id'), 'Safe notices stay, the sensitive one is replaced by an omitted marker.');
+        TestCase::assertTrue(!str_contains($partial, 'Secret'), 'The sensitive id never reaches the report.');
+        unset($GLOBALS['ITP_CONTEXT_STUB_RULES']);
+    }
+
+    /**
+     * @return array{summary: array{totalIssues: int}, notices: list<array{id: string, message: string}>}
+     */
+    private static function decode(string $json): array
+    {
+        /** @var array{summary: array{totalIssues: int}, notices: list<array{id: string, message: string}>} $decoded */
+        $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+
+        return $decoded;
     }
 
     /**
