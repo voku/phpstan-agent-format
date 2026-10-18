@@ -39,6 +39,7 @@ final class ArchitectureNoticeBuilder
             foreach ([
                 method_exists($error, 'getFile') ? $error->getFile() : null,
                 method_exists($error, 'getFilePath') ? $error->getFilePath() : null,
+                method_exists($error, 'getTraitFilePath') ? $error->getTraitFilePath() : null,
             ] as $file) {
                 if (is_string($file) && $file !== '') {
                     $files[$file] = true;

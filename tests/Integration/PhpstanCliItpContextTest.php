@@ -48,6 +48,7 @@ final class PhpstanCliItpContextTest
             self::assertNoIssuesMeansNoNotices($root, $dir);
             self::assertIssuesInUnannotatedFilesMeanNoNotices($root, $dir);
             self::assertIssuesSelectTheirRules($root, $dir);
+            self::assertTraitIssuesSelectTraitRule($root, $dir);
             self::assertFileIndependentErrorsCarryNoNotices($root, $dir);
             self::assertWarmCacheIsIdentical($root, $dir);
             self::assertNoticesNeverChangeExitCode($root, $dir);
@@ -114,6 +115,25 @@ final class PhpstanCliItpContextTest
 
         [$other] = self::withIssuesIn($root, $dir, ['ItpContextBroken/MailBroken.php']);
         TestCase::assertSame([self::MAIL], self::ids($other), 'An issue in a Mail file selects only the Mail rule.');
+    }
+
+    private static function assertTraitIssuesSelectTraitRule(string $root, string $dir): void
+    {
+        // The diagnostic arises inside an annotated trait used by a class without Rule attributes.
+        // This exercises the real PHPStan Error path contract rather than the unit-test FakeError.
+        [$output, $exit] = self::analyse(
+            $root,
+            $dir,
+            [...self::GREEN, 'ItpContextBroken/AnnotatedBrokenTrait.php', 'ItpContextBroken/TraitConsumer.php'],
+            true,
+            true,
+            'trait',
+        );
+
+        TestCase::assertSame(1, $exit, 'The error inside the used trait must fail PHPStan.');
+        TestCase::assertSame([self::MAIL], self::ids($output), 'An error inside an annotated trait must expose the trait rule.');
+        $message = self::decode($output)['notices'][0]['message'] ?? '';
+        TestCase::assertTrue(str_contains($message, 'AnnotatedBrokenTrait'), 'The notice must name the annotated trait, not invent a rule on its unannotated consumer.');
     }
 
     /**
