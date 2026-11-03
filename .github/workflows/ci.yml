@@ -122,6 +122,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -143,4 +145,36 @@ jobs:
         run: composer test
 
       - name: PHPStan (legacy API)
+        run: vendor/bin/phpstan analyse --configuration phpstan.neon.dist --no-progress
+
+  phpstan-2-3-legacy-strict-rules:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install supported mixed-version dependency graph
+        run: composer update phpstan/phpstan:2.3.5 phpstan/phpstan-strict-rules:2.0.11 --with-all-dependencies --prefer-dist --no-interaction --no-progress
+
+      - name: Verify both resolved package versions
+        run: |
+          vendor/bin/phpstan --version | grep -F '2.3.5'
+          composer show phpstan/phpstan-strict-rules | grep -F 'versions : * 2.0.11'
+
+      - name: Run actual CLI/JSON and agent parity tests
+        run: composer test
+
+      - name: PHPStan (mixed graph)
         run: vendor/bin/phpstan analyse --configuration phpstan.neon.dist --no-progress
