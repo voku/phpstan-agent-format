@@ -216,9 +216,15 @@ jobs:
                   return json.load(response)
 
           pr_response = get_json(base)
-          metadata = pr_response.get('data', {})
-          analyzed_head = metadata.get('pullRequest', metadata).get('headCommitSha')
+          metadata = pr_response.get('pullRequest', {})
+          analyzed_head = metadata.get('headCommitSha')
           expected_head = os.environ['PR_HEAD_SHA']
+          print('Codacy analysis running:', pr_response.get('isAnalysing'))
+          print('Codacy expected issue count:', pr_response.get('newIssues'))
+          if pr_response.get('isAnalysing') is True:
+              raise RuntimeError('Codacy analysis not completed; this is not a clean result')
+          if not analyzed_head:
+              raise RuntimeError('Codacy PR head not exposed; exact-head evidence unavailable')
           print('GitHub PR head:', expected_head)
           print('Codacy PR head:', analyzed_head or '(not exposed)')
           if analyzed_head and analyzed_head != expected_head:
@@ -231,6 +237,8 @@ jobs:
               if cursor:
                   params['cursor'] = cursor
               response = get_json(base + '/issues?' + urllib.parse.urlencode(params))
+              if response.get('analyzed') is not True:
+                  raise RuntimeError('Codacy issue endpoint reports analysis incomplete')
               batch = response.get('data')
               if not isinstance(batch, list):
                   raise ValueError('Unexpected Codacy response: missing issue data list')
@@ -241,6 +249,10 @@ jobs:
               cursor = next_cursor
           else:
               raise RuntimeError('Codacy pagination exceeded 10 pages; evidence incomplete')
+
+          expected_total = pr_response.get('newIssues')
+          if expected_total is not None and len(issues) != expected_total:
+              raise RuntimeError(f'Codacy issue-count mismatch: {len(issues)} returned, {expected_total} advertised')
 
           counts = collections.Counter(
               str(item.get('commitIssue', {}).get('patternInfo', {}).get('severityLevel', 'unknown'))
@@ -271,11 +283,11 @@ jobs:
 
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
               summary.write(
-                  '### Codacy public PR findings (read-only)\\n'
-                  f'GitHub head: \`{expected_head}\`\\n\\n'
-                  f'Codacy head: \`{analyzed_head or "not exposed"}\`\\n\\n'
-                  f'New issues: **{len(issues)}**; by severity: \`{dict(counts)}\`\\n'
-                  'Full issue details are in the uploaded \`codacy-issues.json\` artifact.\\n'
+                  '### Codacy public PR findings (read-only)\n'
+                  f'GitHub head: `{expected_head}`\n\n'
+                  f'Codacy head: `{analyzed_head or "not exposed"}`\n\n'
+                  f'New issues: **{len(issues)}**; by severity: `{dict(counts)}`\n'
+                  'Full issue details are in the uploaded `codacy-issues.json` artifact.\n'
               )
           PY
 
