@@ -48,7 +48,7 @@ final class PhpstanCliFixabilityIntegrationTest
         TestCase::assertSame(2, count($importedIssues), 'Reformatted JSON output must preserve both upstream cast issues.');
 
         // PHPStan 2.1 does not expose Error::isFixable(); PHPStan 2.3.5 and strict-rules 2.1.1 do.
-        $upstreamSupportsFixes = method_exists(Error::class, 'isFixable');
+        $upstreamSupportsFixes = version_compare(InstalledVersions::getPrettyVersion('phpstan/phpstan') ?? '0.0.0', '2.3.5', '>=');
         TestCase::assertSame($upstreamSupportsFixes, ($nativeIssues[$integerCast]['fixable'] ?? null) === true, 'Native PHPStan output must provide the expected upstream fixability evidence.');
 
         foreach ([$agentIssues, $importedIssues] as $issues) {
