@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Voku\PhpstanAgentFormat\Tests\Integration;
 
-use PHPStan\Analyser\Error;
+use Composer\InstalledVersions;
 use Voku\PhpstanAgentFormat\Formatter\AgentErrorFormatter;
 use Voku\PhpstanAgentFormat\Tests\Support\TestCase;
 
