@@ -113,3 +113,31 @@ jobs:
         env:
           ITP_CONTEXT_DIR: ${{ github.workspace }}/_integration/itp-context
           ITP_CONTEXT_REQUIRED: '1'
+
+  phpstan-2-1-compatibility:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install PHPStan 2.1.50 within supported constraint
+        run: composer update phpstan/phpstan:2.1.50 --prefer-dist --no-interaction --no-progress
+
+      - name: Verify PHPStan version
+        run: vendor/bin/phpstan --version | grep -F '2.1.50'
+
+      - name: Test legacy integration
+        run: composer test
+
+      - name: PHPStan (legacy API)
+        run: vendor/bin/phpstan analyse --configuration phpstan.neon.dist --no-progress

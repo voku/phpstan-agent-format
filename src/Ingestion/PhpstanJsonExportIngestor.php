@@ -60,6 +60,7 @@ final class PhpstanJsonExportIngestor
                         nodeLine: $nodeLine,
                         nodeType: $nodeType,
                         traitFilePath: $traitFilePath,
+                        fixable: ($message['fixable'] ?? null) === true,
                     );
                 }
             }

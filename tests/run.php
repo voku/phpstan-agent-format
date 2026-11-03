@@ -13,6 +13,7 @@ $tests = [
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\AgentErrorFormatterTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\ArchitectureNoticeBuilderTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\PhpstanJsonExportIngestorTest', 'run'],
+    ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\PhpstanFixabilityTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Unit\\SerializerTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\FormatterIntegrationTest', 'run'],
     ['Voku\\PhpstanAgentFormat\\Tests\\Integration\\PhpstanCliBlindSpotMatrixTest', 'run'],

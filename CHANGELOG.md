@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Preserve PHPStan 2.3.5+ explicit `isFixable()` / JSON `fixable: true` evidence as optional `fixable: true` on representative agent issues; omit when false or unsupported. Keep fix hints advisory and do not execute `--fix`.
+- Regression tests for live and imported fixability signals, legacy reports, and immutable issue transformations; test compatibility with PHPStan 2.1.50 in CI.
+
 ## [0.3.2] - 2026-10-18
 
 ### Fixed
