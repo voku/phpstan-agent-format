@@ -136,6 +136,9 @@ jobs:
       - name: Verify PHPStan version
         run: vendor/bin/phpstan --version | grep -F '2.1.50'
 
+      - name: PHPStan 2.1 clean CLI smoke
+        run: vendor/bin/phpstan analyse --configuration tests/Config/phpstan-agent-clean.neon --error-format=json --no-progress
+
       - name: Test legacy integration
         run: composer test
 
