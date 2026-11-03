@@ -11,7 +11,7 @@ final class PhpstanJsonExportIngestor
 {
     /**
      * @param array<string, mixed>|string $payload
-     * @return array{fileSpecificErrors:list<object>,notFileSpecificErrors:list<string>}
+     * @return array{fileSpecificErrors:list<ImportedPhpstanError>,notFileSpecificErrors:list<string>}
      */
     public function ingest(array|string $payload): array
     {
