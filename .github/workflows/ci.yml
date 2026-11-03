@@ -79,6 +79,9 @@ jobs:
           test "$status" -eq 1
           php -r '$payload = json_decode(file_get_contents("/tmp/phpstan-agent-reduced.json"), true, 512, JSON_THROW_ON_ERROR); if (($payload["summary"]["tokenStats"]["wasReduced"] ?? false) !== true) { fwrite(STDERR, "Expected reduced payload.\n"); exit(1); } if (($payload["summary"]["suppressedDuplicates"] ?? 0) < 1) { fwrite(STDERR, "Expected suppressed duplicates.\n"); exit(1); }'
 
+      - name: Verify read-only reporting leaves tracked files unchanged
+        run: git diff --exit-code
+
   itp-context-e2e:
     runs-on: ubuntu-latest
     permissions:
