@@ -180,3 +180,110 @@ jobs:
 
       - name: PHPStan (mixed graph)
         run: vendor/bin/phpstan analyse --configuration phpstan.neon.dist --no-progress
+
+
+  # Non-mutating PR-specific diagnostic; never supplies credentials to external services.
+  codacy-public-evidence:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Fetch public Codacy findings without authentication
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - <<'PY'
+          import collections
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          base = (
+              'https://api.codacy.com/api/v3/analysis/organizations/gh/voku/'
+              'repositories/phpstan-agent-format/pull-requests/' + os.environ['PR_NUMBER']
+          )
+
+          def get_json(url):
+              request = urllib.request.Request(
+                  url,
+                  headers={'Accept': 'application/json', 'User-Agent': 'phpstan-agent-format-readonly-ci'},
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+
+          pr_response = get_json(base)
+          metadata = pr_response.get('data', {})
+          analyzed_head = metadata.get('pullRequest', metadata).get('headCommitSha')
+          expected_head = os.environ['PR_HEAD_SHA']
+          print('GitHub PR head:', expected_head)
+          print('Codacy PR head:', analyzed_head or '(not exposed)')
+          if analyzed_head and analyzed_head != expected_head:
+              raise RuntimeError('Codacy PR evidence is stale for the exact head')
+
+          issues = []
+          cursor = None
+          for page in range(10):
+              params = {'status': 'new', 'limit': 100}
+              if cursor:
+                  params['cursor'] = cursor
+              response = get_json(base + '/issues?' + urllib.parse.urlencode(params))
+              batch = response.get('data')
+              if not isinstance(batch, list):
+                  raise ValueError('Unexpected Codacy response: missing issue data list')
+              issues.extend(batch)
+              next_cursor = response.get('pagination', {}).get('cursor')
+              if not next_cursor or next_cursor == cursor or not batch:
+                  break
+              cursor = next_cursor
+          else:
+              raise RuntimeError('Codacy pagination exceeded 10 pages; evidence incomplete')
+
+          counts = collections.Counter(
+              str(item.get('commitIssue', {}).get('patternInfo', {}).get('severityLevel', 'unknown'))
+              for item in issues
+          )
+          result = {
+              'githubHeadSha': expected_head,
+              'codacyHeadSha': analyzed_head,
+              'newIssuesCount': len(issues),
+              'severities': dict(counts),
+              'issues': issues,
+          }
+          with open('codacy-issues.json', 'w', encoding='utf-8') as output:
+              json.dump(result, output, ensure_ascii=False, indent=2)
+
+          print('Codacy issues:', len(issues), 'by severity:', dict(counts))
+          for entry in issues[:20]:
+              issue = entry.get('commitIssue', {})
+              rule = issue.get('patternInfo', {})
+              print(json.dumps({
+                  'path': issue.get('filePath'),
+                  'line': issue.get('lineNumber'),
+                  'severity': rule.get('severityLevel'),
+                  'tool': issue.get('toolInfo', {}).get('name'),
+                  'rule': rule.get('id'),
+                  'message': issue.get('message'),
+              }, ensure_ascii=False))
+
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write(
+                  '### Codacy public PR findings (read-only)\\n'
+                  f'GitHub head: \`{expected_head}\`\\n\\n'
+                  f'Codacy head: \`{analyzed_head or "not exposed"}\`\\n\\n'
+                  f'New issues: **{len(issues)}**; by severity: \`{dict(counts)}\`\\n'
+                  'Full issue details are in the uploaded \`codacy-issues.json\` artifact.\\n'
+              )
+          PY
+
+      - name: Upload Codacy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codacy-public-issues
+          path: codacy-issues.json
+          if-no-files-found: warn
+          retention-days: 7
