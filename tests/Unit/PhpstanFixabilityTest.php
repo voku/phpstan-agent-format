@@ -18,6 +18,7 @@ final class PhpstanFixabilityTest
     public static function run(): void
     {
         self::assertDirectAnalysisUsesExplicitFixability();
+        self::assertMagicCallDoesNotProveFixability();
         self::assertJsonExportUsesExplicitFixability();
     }
 
@@ -105,6 +106,45 @@ final class PhpstanFixabilityTest
             !array_key_exists('fixable', $byMessage['Legacy PHPStan error without isFixable.']->toArray()),
             'Unknown fixability must not be reported as an automatic fix.',
         );
+    }
+
+    private static function assertMagicCallDoesNotProveFixability(): void
+    {
+        $magicTrue = new class {
+            public function getMessage(): string
+            {
+                return 'Magic __call returns true.';
+            }
+
+            /** @param list<mixed> $arguments */
+            public function __call(string $name, array $arguments): bool
+            {
+                return true;
+            }
+        };
+
+        $magicThrows = new class {
+            public function getMessage(): string
+            {
+                return 'Magic __call throws.';
+            }
+
+            /** @param list<mixed> $arguments */
+            public function __call(string $name, array $arguments): never
+            {
+                throw new \\LogicException('Unknown method must not be called: ' . $name);
+            }
+        };
+
+        $config = AgentFormatConfig::fromParameters(['outputMode' => 'json']);
+        $normalizer = new IssueNormalizer(new ContextExtractor($config), new ContextTraceBuilder(), $config);
+        $issues = $normalizer->normalizeRaw([$magicTrue, $magicThrows]);
+
+        TestCase::assertSame(2, count($issues), 'Both unsupported API errors must still be reported.');
+        foreach ($issues as $issue) {
+            TestCase::assertSame(false, $issue->fixable, 'Magic __call cannot prove upstream fixability.');
+            TestCase::assertTrue(!array_key_exists('fixable', $issue->toArray()), 'Unsupported fixability must be omitted.');
+        }
     }
 
     private static function assertJsonExportUsesExplicitFixability(): void
