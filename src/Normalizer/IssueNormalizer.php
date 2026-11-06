@@ -552,6 +552,10 @@ final readonly class IssueNormalizer
 
     private function getBool(object $object, string $method): bool
     {
+        if (!method_exists($object, $method)) {
+            return false;
+        }
+
         $callable = [$object, $method];
 
         return is_callable($callable) && $callable() === true;
