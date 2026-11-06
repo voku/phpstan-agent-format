@@ -78,6 +78,7 @@ final readonly class IssueNormalizer
             $ruleIdentifier = $this->getNullableString($error, 'getIdentifier');
             $tip = $this->getNullableString($error, 'getTip');
             $metadata = $this->getArray($error, 'getMetadata');
+            $fixable = $this->getBool($error, 'isFixable');
 
             $location = new FileLocation($filePath, $line);
             $nodeLocation = $nodeLine !== null && $nodeLine !== $line ? new FileLocation($filePath, $this->normalizeLineNumber($nodeLine)) : null;
@@ -98,6 +99,7 @@ final readonly class IssueNormalizer
                 contextTrace: $this->traceBuilder->build($location, $symbolContext, $ruleIdentifier, $message, $nodeLocation, $nodeType, $traitLocation, $tip),
                 fixHint: $fixHint,
                 secondaryLocations: $this->extractSecondaryLocations($location, $nodeLocation, $traitLocation),
+                fixable: $fixable,
                 exposeDocblock: $this->config?->includeDocblock === true,
                 docblock: $docblock,
                 exposeRelatedDefinition: $this->config?->includeRelatedDefinition === true,
@@ -546,6 +548,17 @@ final readonly class IssueNormalizer
         $value = $callable();
 
         return is_string($value) && $value !== '' ? $value : $default;
+    }
+
+    private function getBool(object $object, string $method): bool
+    {
+        if (!method_exists($object, $method)) {
+            return false;
+        }
+
+        $callable = [$object, $method];
+
+        return is_callable($callable) && $callable() === true;
     }
 
     private function getInt(object $object, string $method, int $default): int
