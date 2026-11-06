@@ -132,7 +132,7 @@ final class PhpstanFixabilityTest
             /** @param list<mixed> $arguments */
             public function __call(string $name, array $arguments): never
             {
-                throw new \\LogicException('Unknown method must not be called: ' . $name);
+                throw new \LogicException('Unknown method must not be called: ' . $name);
             }
         };
 
