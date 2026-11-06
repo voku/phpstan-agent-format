@@ -1,0 +1,152 @@
+name: PR39 Codacy evidence (temporary)
+
+on:
+  push:
+    branches:
+      - audit/pr39-codacy-evidence-20261106
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-codacy-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify exact PR head and fetch public Codacy findings
+        env:
+          REPOSITORY: voku/phpstan-agent-format
+          PR_NUMBER: '39'
+          EXPECTED_HEAD: '0cc36d542a3e0c64277e017daf6f23d719e7552a'
+        run: |
+          python3 - <<'PY'
+          import collections
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          def load(url):
+              request = urllib.request.Request(
+                  url,
+                  headers={
+                      'Accept': 'application/json',
+                      'User-Agent': 'phpstan-agent-format-codacy-readonly-audit',
+                  },
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+
+          repository = os.environ['REPOSITORY']
+          number = os.environ['PR_NUMBER']
+          expected = os.environ['EXPECTED_HEAD']
+
+          github = load(f'https://api.github.com/repos/{repository}/pulls/{number}')
+          actual = github['head']['sha']
+          print('GitHub PR head:', actual, flush=True)
+          if actual != expected:
+              raise RuntimeError(f'PR head moved: expected {expected}, actual {actual}')
+
+          base = (
+              f'https://api.codacy.com/api/v3/analysis/organizations/gh/voku/'
+              f'repositories/phpstan-agent-format/pull-requests/{number}'
+          )
+          metadata = load(base)
+          codacy_sha = metadata.get('pullRequest', {}).get('headCommitSha')
+          print('Codacy head:', codacy_sha, flush=True)
+          if metadata.get('isAnalysing') is True:
+              raise RuntimeError('Codacy analysis still running: no exact-head evidence yet')
+          if codacy_sha != expected:
+              raise RuntimeError(f'Codacy result stale: expected {expected}, actual {codacy_sha}')
+
+          issues = []
+          cursor = None
+          for page in range(20):
+              parameters = {'status': 'new', 'limit': 100}
+              if cursor:
+                  parameters['cursor'] = cursor
+              response = load(base + '/issues?' + urllib.parse.urlencode(parameters))
+              if response.get('analyzed') is not True:
+                  raise RuntimeError('Codacy issue listing is not finalized')
+              batch = response.get('data')
+              if not isinstance(batch, list):
+                  raise RuntimeError('Unexpected Codacy issue response')
+              issues.extend(batch)
+              next_cursor = response.get('pagination', {}).get('cursor')
+              if not next_cursor:
+                  break
+              if next_cursor == cursor:
+                  raise RuntimeError('Codacy cursor repeated')
+              cursor = next_cursor
+          else:
+              raise RuntimeError('Too many Codacy pages')
+
+          expected_count = metadata.get('newIssues')
+          if expected_count is None or len(issues) != expected_count:
+              raise RuntimeError(f'Count mismatch: API expects {expected_count}, fetched {len(issues)}')
+
+          by_tool = collections.Counter()
+          by_rule = collections.Counter()
+          by_file = collections.Counter()
+          by_severity = collections.Counter()
+          examples = {}
+
+          for item in issues:
+              issue = item.get('commitIssue', {})
+              rule = issue.get('patternInfo', {})
+              tool = issue.get('toolInfo', {}).get('name') or 'unknown'
+              rule_id = str(rule.get('id') or 'unknown')
+              severity = str(rule.get('severityLevel') or 'unknown')
+              file_path = str(issue.get('filePath') or 'unknown')
+              key = (tool, rule_id, severity)
+              by_tool[tool] += 1
+              by_rule[key] += 1
+              by_file[file_path] += 1
+              by_severity[severity] += 1
+              examples.setdefault(key, {
+                  'file': file_path,
+                  'line': issue.get('lineNumber'),
+                  'message': issue.get('message'),
+              })
+
+          result = {
+              'githubHeadSha': expected,
+              'codacyHeadSha': codacy_sha,
+              'newIssuesCount': len(issues),
+              'byTool': dict(by_tool),
+              'bySeverity': dict(by_severity),
+              'ruleCounts': [
+                  {'tool': key[0], 'rule': key[1], 'severity': key[2],
+                   'count': count, 'example': examples[key]}
+                  for key, count in by_rule.most_common()
+              ],
+              'fileCounts': dict(by_file),
+              'issues': issues,
+          }
+          with open('pr39-codacy-evidence.json', 'w', encoding='utf-8') as handle:
+              json.dump(result, handle, indent=2, ensure_ascii=False)
+
+          print('ISSUE_TOTAL', len(issues))
+          print('BY_TOOL', json.dumps(dict(by_tool), sort_keys=True))
+          print('BY_SEVERITY', json.dumps(dict(by_severity), sort_keys=True))
+          print('RULE_BREAKDOWN')
+          for key, count in by_rule.most_common():
+              print(json.dumps({'tool': key[0], 'rule': key[1],
+                                'severity': key[2], 'count': count,
+                                'example': examples[key]}, ensure_ascii=False))
+          print('FILES_TOP_20', json.dumps(by_file.most_common(20)))
+
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as handle:
+              handle.write(f'## PR #39 Codacy exact-head evidence\n\n')
+              handle.write(f'GitHub/Codacy head: `{expected}`\n\n')
+              handle.write(f'New issues: **{len(issues)}**. Full JSON attached as artifact.\n')
+          PY
+
+      - name: Publish read-only Codacy artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr39-codacy-exact-head
+          path: pr39-codacy-evidence.json
+          if-no-files-found: warn
+          retention-days: 7
