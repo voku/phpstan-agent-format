@@ -136,11 +136,29 @@ final class PhpstanFixabilityTest
             }
         };
 
+        $inaccessibleFixability = new class {
+            public function getMessage(): string
+            {
+                return 'Private isFixable must not be forwarded to __call.';
+            }
+
+            private function isFixable(): bool
+            {
+                return false;
+            }
+
+            /** @param list<mixed> $arguments */
+            public function __call(string $name, array $arguments): bool
+            {
+                return true;
+            }
+        };
+
         $config = AgentFormatConfig::fromParameters(['outputMode' => 'json']);
         $normalizer = new IssueNormalizer(new ContextExtractor($config), new ContextTraceBuilder(), $config);
-        $issues = $normalizer->normalizeRaw([$magicTrue, $magicThrows]);
+        $issues = $normalizer->normalizeRaw([$magicTrue, $magicThrows, $inaccessibleFixability]);
 
-        TestCase::assertSame(2, count($issues), 'Both unsupported API errors must still be reported.');
+        TestCase::assertSame(3, count($issues), 'Unsupported and inaccessible fixability methods must not be trusted.');
         foreach ($issues as $issue) {
             TestCase::assertSame(false, $issue->fixable, 'Magic __call cannot prove upstream fixability.');
             TestCase::assertTrue(!array_key_exists('fixable', $issue->toArray()), 'Unsupported fixability must be omitted.');
