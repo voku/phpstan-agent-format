@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Voku\PhpstanAgentFormat\Normalizer;
 
 use PHPStan\Command\AnalysisResult;
+use ReflectionMethod;
 use Voku\PhpstanAgentFormat\Context\ContextExtractor;
 use Voku\PhpstanAgentFormat\Context\ContextTraceBuilder;
 use Voku\PhpstanAgentFormat\Context\DocblockExtractor;
@@ -553,6 +554,12 @@ final readonly class IssueNormalizer
     private function getBool(object $object, string $method): bool
     {
         if (!method_exists($object, $method)) {
+            return false;
+        }
+
+        // __call() can make an inaccessible declared method appear callable.
+        // Only an explicitly public upstream method can prove fixability.
+        if (!(new ReflectionMethod($object, $method))->isPublic()) {
             return false;
         }
 
