@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+
+- Register `ArchitectureNoticeBuilder` explicitly for PHPStan 2.1 DI compatibility; keep the existing formatter constructor and optional architecture context behavior.
+
+### Added
+
+- Preserve PHPStan 2.3.5+ explicit `isFixable()` / JSON `fixable: true` evidence as optional `fixable: true` on representative agent issues; omit when false or unsupported. Keep fix hints advisory and do not execute `--fix`.
+- Regression tests for upstream CLI/JSON fixability parity, legacy reports, and immutable issue transformations; test compatibility with PHPStan 2.1.50 and strict-rules 2.0.11 in CI.
+
 ## [0.3.2] - 2026-10-18
 
 ### Fixed

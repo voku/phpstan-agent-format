@@ -57,6 +57,12 @@ Recommended agent loop:
 
 When an agent needs JSON instead of TOON (e.g. for structured tool output), set `agentFormat.outputMode: json`.
 
+### PHPStan 2.3 auto-fix metadata
+
+Starting with PHPStan **2.3.5**, a representative issue can include `fixable: true` when PHPStan explicitly provides an automatic AST fix. This also survives conversion from PHPStan's `--error-format=json` exports. The field is **omitted** for older PHPStan versions, non-fixable issues, and unknown fixability. `repairStrategySummary` is an advisory hint, **not** a verified automatic fix.
+
+`phpstan analyse --fix` and `--fix-ignored` belong to **PHPStan itself**, not this formatter. Do not run them as part of a read-only reporting or approval workflow; they can modify source files or ignored-error configuration. Verify diffs and rerun analysis/tests before accepting any fix. The extension stays registered through `extension.neon` for compatibility with PHPStan 2.1+, even though PHPStan 2.3.5 adds optional attribute-based registration.
+
 ---
 
 ## 🚮 Why this exists
