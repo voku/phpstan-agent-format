@@ -147,12 +147,19 @@ final class PhpstanFixabilityTest
                 return false;
             }
 
+            public function inspectDeclaredFixability(): bool
+            {
+                return $this->isFixable();
+            }
+
             /** @param list<mixed> $arguments */
             public function __call(string $name, array $arguments): bool
             {
                 return true;
             }
         };
+
+        TestCase::assertSame(false, $inaccessibleFixability->inspectDeclaredFixability(), 'The private method exists and returns false.');
 
         $config = AgentFormatConfig::fromParameters(['outputMode' => 'json']);
         $normalizer = new IssueNormalizer(new ContextExtractor($config), new ContextTraceBuilder(), $config);
