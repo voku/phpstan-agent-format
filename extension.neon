@@ -12,6 +12,8 @@ parameters:
         itpContext: false
 
 services:
+    - Voku\PhpstanAgentFormat\ItpContext\ArchitectureNoticeBuilder
+
     errorFormatter.agent:
         class: Voku\PhpstanAgentFormat\Formatter\AgentErrorFormatter
         arguments:

@@ -23,6 +23,7 @@ final readonly class AgentIssue
         public ?string $docblock = null,
         public bool $exposeRelatedDefinition = false,
         public ?RelatedDefinition $relatedDefinition = null,
+        public bool $fixable = false,
     ) {
     }
 
@@ -38,6 +39,7 @@ final readonly class AgentIssue
      *     rootCauseSummary: string,
      *     repairStrategySummary: string,
      *     secondaryLocations: list<array{file: string, line: int}>,
+     *     fixable?: bool,
      *     docblock?: ?string,
      *     relatedDefinition?: array{file:string,line:int,endLine:int|null,symbol:string,kind:string,snippet:list<string>,attributes:list<string>}|null
      * }
@@ -61,6 +63,10 @@ final readonly class AgentIssue
             'repairStrategySummary' => $this->fixHint->repairStrategySummary,
             'secondaryLocations' => $secondaryLocations,
         ];
+
+        if ($this->fixable) {
+            $result['fixable'] = true;
+        }
 
         if ($this->exposeDocblock) {
             $result['docblock'] = $this->docblock;
@@ -91,6 +97,7 @@ final readonly class AgentIssue
             docblock: $this->docblock,
             exposeRelatedDefinition: $this->exposeRelatedDefinition,
             relatedDefinition: $this->relatedDefinition,
+            fixable: $this->fixable,
         );
     }
 
@@ -110,6 +117,7 @@ final readonly class AgentIssue
             docblock: null,
             exposeRelatedDefinition: $this->exposeRelatedDefinition,
             relatedDefinition: null,
+            fixable: $this->fixable,
         );
     }
 
@@ -129,6 +137,7 @@ final readonly class AgentIssue
             docblock: $this->docblock,
             exposeRelatedDefinition: $this->exposeRelatedDefinition,
             relatedDefinition: $this->relatedDefinition,
+            fixable: $this->fixable,
         );
     }
 }

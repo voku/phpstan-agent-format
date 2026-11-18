@@ -19,6 +19,7 @@ final readonly class ImportedPhpstanError
         private ?int $nodeLine = null,
         private ?string $nodeType = null,
         private ?string $traitFilePath = null,
+        private bool $fixable = false,
     ) {
     }
 
@@ -68,6 +69,11 @@ final readonly class ImportedPhpstanError
     public function getNodeType(): ?string
     {
         return $this->nodeType;
+    }
+
+    public function isFixable(): bool
+    {
+        return $this->fixable;
     }
 
     public function getTraitFilePath(): ?string

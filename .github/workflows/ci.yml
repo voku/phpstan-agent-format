@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -77,6 +79,9 @@ jobs:
           test "$status" -eq 1
           php -r '$payload = json_decode(file_get_contents("/tmp/phpstan-agent-reduced.json"), true, 512, JSON_THROW_ON_ERROR); if (($payload["summary"]["tokenStats"]["wasReduced"] ?? false) !== true) { fwrite(STDERR, "Expected reduced payload.\n"); exit(1); } if (($payload["summary"]["suppressedDuplicates"] ?? 0) < 1) { fwrite(STDERR, "Expected suppressed duplicates.\n"); exit(1); }'
 
+      - name: Verify read-only reporting leaves tracked files unchanged
+        run: git diff --exit-code
+
   itp-context-e2e:
     runs-on: ubuntu-latest
     permissions:
@@ -113,3 +118,68 @@ jobs:
         env:
           ITP_CONTEXT_DIR: ${{ github.workspace }}/_integration/itp-context
           ITP_CONTEXT_REQUIRED: '1'
+
+  phpstan-2-1-compatibility:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install PHPStan 2.1.50 within supported constraint
+        run: composer update phpstan/phpstan:2.1.50 phpstan/phpstan-strict-rules:2.0.11 --with-all-dependencies --prefer-dist --no-interaction --no-progress
+
+      - name: Verify PHPStan version
+        run: vendor/bin/phpstan --version | grep -F '2.1.50'
+
+      - name: PHPStan 2.1 clean CLI smoke
+        run: vendor/bin/phpstan analyse --configuration tests/Config/phpstan-agent-clean.neon --error-format=json --no-progress
+
+      - name: Test legacy integration
+        run: composer test
+
+      - name: PHPStan (legacy API)
+        run: vendor/bin/phpstan analyse --configuration phpstan.neon.dist --no-progress
+
+  phpstan-2-3-legacy-strict-rules:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install supported mixed-version dependency graph
+        run: composer update phpstan/phpstan:2.3.5 phpstan/phpstan-strict-rules:2.0.11 --with-all-dependencies --prefer-dist --no-interaction --no-progress
+
+      - name: Verify both resolved package versions
+        run: |
+          vendor/bin/phpstan --version | grep -F '2.3.5'
+          composer show phpstan/phpstan-strict-rules | grep -F 'versions : * 2.0.11'
+
+      - name: Run actual CLI/JSON and agent parity tests
+        run: composer test
+
+      - name: PHPStan (mixed graph)
+        run: vendor/bin/phpstan analyse --configuration phpstan.neon.dist --no-progress
