@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-19
+
 ### Fixed
 
 - Register `ArchitectureNoticeBuilder` explicitly for PHPStan 2.1 DI compatibility; keep the existing formatter constructor and optional architecture context behavior.
